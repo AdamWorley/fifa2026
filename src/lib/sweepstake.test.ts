@@ -11,8 +11,11 @@ import {
 
 const sample: SweepstakeState = {
   title: 'Office Cup',
-  participants: ['Alice', 'Bob'],
-  assignments: { brazil: 0, england: 1, spain: 0 },
+  participants: [
+    { id: 'a', name: 'Alice' },
+    { id: 'b', name: 'Bob' },
+  ],
+  assignments: { brazil: 'a', england: 'b', spain: 'a' },
 }
 
 describe('url state round-trip', () => {
@@ -27,40 +30,45 @@ describe('url state round-trip', () => {
 
   it('drops assignments pointing at non-existent participants', () => {
     const decoded = decodeState(
-      encodeState({ participants: ['Solo'], assignments: { brazil: 0, spain: 5 } }),
+      encodeState({
+        participants: [{ id: 's', name: 'Solo' }],
+        assignments: { brazil: 's', spain: 'ghost' },
+      }),
     )
-    expect(decoded.assignments).toEqual({ brazil: 0 })
+    expect(decoded.assignments).toEqual({ brazil: 's' })
   })
 })
 
 describe('assignment helpers', () => {
   it('reads owner or null', () => {
-    expect(ownerOf(sample, 'brazil')).toBe(0)
+    expect(ownerOf(sample, 'brazil')).toBe('a')
     expect(ownerOf(sample, 'japan')).toBeNull()
   })
 
   it('groups teams by participant', () => {
     const map = teamsByParticipant(sample)
-    expect(map.get(0)?.sort()).toEqual(['brazil', 'spain'])
-    expect(map.get(1)).toEqual(['england'])
+    expect(map.get('a')?.sort()).toEqual(['brazil', 'spain'])
+    expect(map.get('b')).toEqual(['england'])
   })
 
   it('assigns and unassigns immutably', () => {
-    const assigned = setAssignment(sample, 'japan', 1)
-    expect(assigned.assignments.japan).toBe(1)
+    const assigned = setAssignment(sample, 'japan', 'b')
+    expect(assigned.assignments.japan).toBe('b')
     expect(sample.assignments.japan).toBeUndefined()
     expect(setAssignment(assigned, 'japan', null).assignments.japan).toBeUndefined()
   })
 
-  it('re-indexes assignments when a participant is removed', () => {
-    const result = removeParticipant(sample, 0) // remove Alice (index 0)
-    expect(result.participants).toEqual(['Bob'])
-    // Bob shifts from index 1 to 0; Alice's teams are dropped.
-    expect(result.assignments).toEqual({ england: 0 })
+  it('drops a removed participant’s teams without disturbing other ids', () => {
+    const result = removeParticipant(sample, 'a') // remove Alice
+    expect(result.participants).toEqual([{ id: 'b', name: 'Bob' }])
+    // Bob keeps his id; Alice's teams are dropped.
+    expect(result.assignments).toEqual({ england: 'b' })
   })
 
-  it('adds participants and trims blanks', () => {
-    expect(addParticipant(sample, '  Carol  ').participants).toContain('Carol')
+  it('adds participants with a fresh id and trims blanks', () => {
+    const added = addParticipant(sample, '  Carol  ')
+    expect(added.participants.map((p) => p.name)).toContain('Carol')
+    expect(added.participants.at(-1)?.id).toBeTruthy()
     expect(addParticipant(sample, '   ')).toBe(sample)
   })
 })
@@ -73,16 +81,21 @@ describe('random draw', () => {
       return seed / 0x7fffffff
     }
     const teams = Array.from({ length: 48 }, (_, i) => `t${i}`)
-    const drawn = randomDraw({ participants: ['A', 'B', 'C'], assignments: {} }, teams, rng)
-    const counts = [0, 0, 0]
-    for (const idx of Object.values(drawn.assignments)) counts[idx]++
+    const participants = [
+      { id: 'a', name: 'A' },
+      { id: 'b', name: 'B' },
+      { id: 'c', name: 'C' },
+    ]
+    const drawn = randomDraw({ participants, assignments: {} }, teams, rng)
+    const counts: Record<string, number> = { a: 0, b: 0, c: 0 }
+    for (const id of Object.values(drawn.assignments)) counts[id]++
     expect(Object.keys(drawn.assignments)).toHaveLength(48)
-    expect(counts).toEqual([16, 16, 16])
+    expect(counts).toEqual({ a: 16, b: 16, c: 16 })
   })
 
   it('clears assignments when there are no participants', () => {
-    expect(randomDraw({ participants: [], assignments: { brazil: 0 } }, ['brazil']).assignments).toEqual(
-      {},
-    )
+    expect(
+      randomDraw({ participants: [], assignments: { brazil: 'a' } }, ['brazil']).assignments,
+    ).toEqual({})
   })
 })

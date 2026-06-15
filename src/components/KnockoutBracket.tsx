@@ -5,7 +5,7 @@ import {
   type Stage,
 } from '../data/tournament'
 import { resolveTeamId } from '../lib/aliases'
-import { ownerOf } from '../lib/sweepstake'
+import { getParticipant, ownerOf } from '../lib/sweepstake'
 import type { MatchResult } from '../lib/results'
 import type { SweepstakeState } from '../lib/urlState'
 import OwnerPill from './OwnerPill'
@@ -14,6 +14,7 @@ import Flag from './Flag'
 interface Props {
   matches: MatchResult[]
   state: SweepstakeState
+  meId?: string | null
 }
 
 const STAGE_ORDER: Stage[] = [
@@ -36,7 +37,7 @@ function liveStageKey(raw: string): Stage | null {
   return null
 }
 
-export default function KnockoutBracket({ matches, state }: Readonly<Props>) {
+export default function KnockoutBracket({ matches, state, meId }: Readonly<Props>) {
   const liveKnockout = matches.filter((m) => !m.isGroupStage && (m.score || m.status !== 'scheduled'))
   const useLive = liveKnockout.length > 0
 
@@ -88,7 +89,7 @@ export default function KnockoutBracket({ matches, state }: Readonly<Props>) {
               </h3>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {rows.map((row, i) => (
-                  <MatchCard key={i} row={row} state={state} />
+                  <MatchCard key={i} row={row} state={state} meId={meId} />
                 ))}
               </div>
             </section>
@@ -108,7 +109,15 @@ interface Row {
   status: MatchResult['status']
 }
 
-function MatchCard({ row, state }: { row: Row; state: SweepstakeState }) {
+function MatchCard({
+  row,
+  state,
+  meId,
+}: {
+  row: Row
+  state: SweepstakeState
+  meId?: string | null
+}) {
   const homeWon = row.score ? row.score.home > row.score.away : false
   const awayWon = row.score ? row.score.away > row.score.home : false
   return (
@@ -119,6 +128,7 @@ function MatchCard({ row, state }: { row: Row; state: SweepstakeState }) {
         goals={row.score?.home ?? null}
         winner={homeWon}
         state={state}
+        meId={meId}
       />
       <div className="my-1 border-t border-line/60" />
       <Side
@@ -127,6 +137,7 @@ function MatchCard({ row, state }: { row: Row; state: SweepstakeState }) {
         goals={row.score?.away ?? null}
         winner={awayWon}
         state={state}
+        meId={meId}
       />
     </div>
   )
@@ -138,15 +149,18 @@ function Side({
   goals,
   winner,
   state,
+  meId,
 }: Readonly<{
   teamId: string | null
   label: string
   goals: number | null
   winner: boolean
   state: SweepstakeState
+  meId?: string | null
 }>) {
   const team = getTeam(teamId)
-  const owner = teamId ? ownerOf(state, teamId) : null
+  const ownerId = teamId ? ownerOf(state, teamId) : null
+  const owner = ownerId ? getParticipant(state, ownerId) : null
   return (
     <div className="flex items-center gap-2">
       <Flag iso={team?.iso ?? null} className="text-base" title={team?.name} />
@@ -154,9 +168,9 @@ function Side({
         <span className={`truncate ${winner ? 'font-black text-navy' : 'font-semibold text-slate-muted'}`}>
           {team?.name ?? label}
         </span>
-        {owner !== null && (
+        {owner && (
           <span className="ml-1.5 align-middle">
-            <OwnerPill name={state.participants[owner]} index={owner} />
+            <OwnerPill participant={owner} you={owner.id === meId} />
           </span>
         )}
       </div>

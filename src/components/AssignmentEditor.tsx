@@ -3,6 +3,7 @@ import { GROUPS, getTeam } from '../data/tournament'
 import { buildShareUrl, type SweepstakeState } from '../lib/urlState'
 import {
   addParticipant,
+  clearAssignments,
   ownerOf,
   removeParticipant,
   renameParticipant,
@@ -37,14 +38,22 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
     setNewName('')
   }
 
+  const shareUrl = buildShareUrl(state)
+
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(buildShareUrl(state))
+      await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
       globalThis.setTimeout(() => setCopied(false), 2000)
     } catch {
-      globalThis.prompt('Copy this shareable link:', buildShareUrl(state))
+      globalThis.prompt('Copy this shareable link:', shareUrl)
     }
+  }
+
+  function handleReset() {
+    if (assignedCount === 0) return
+    const ok = globalThis.confirm('Clear all team assignments? Participants are kept.')
+    if (ok) setState((prev) => clearAssignments(prev))
   }
 
   return (
@@ -61,7 +70,7 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
             placeholder="Add a colleague's name…"
-            className="flex-1 min-w-[12rem] rounded-full border border-line px-4 py-2.5 text-sm focus:border-brand-cyan focus:outline-none"
+            className="flex-1 min-w-[12rem] rounded-full border border-line px-4 py-2.5 text-sm focus:border-brand-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
           />
           <button type="button" className="nw-btn-primary" onClick={handleAdd}>
             Add
@@ -70,27 +79,32 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
 
         {state.participants.length > 0 && (
           <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {state.participants.map((name, i) => (
+            {state.participants.map((participant, i) => (
               <li
-                key={i}
+                key={participant.id}
                 className="flex items-center gap-2 rounded-xl bg-mist px-3 py-2 ring-1 ring-line"
               >
                 <span
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                  style={{ background: participantColor(i) }}
+                  style={{
+                    background: participantColor(participant.id),
+                    textShadow: '0 1px 1px rgba(0,0,0,0.35)',
+                  }}
                 >
                   {i + 1}
                 </span>
                 <input
-                  value={name}
-                  onChange={(e) => setState((prev) => renameParticipant(prev, i, e.target.value))}
-                  className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-navy focus:outline-none"
+                  value={participant.name}
+                  onChange={(e) =>
+                    setState((prev) => renameParticipant(prev, participant.id, e.target.value))
+                  }
+                  className="min-w-0 flex-1 rounded bg-transparent text-sm font-semibold text-navy focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                 />
                 <button
                   type="button"
-                  onClick={() => setState((prev) => removeParticipant(prev, i))}
-                  className="text-slate-muted hover:text-brand-violet"
-                  aria-label={`Remove ${name}`}
+                  onClick={() => setState((prev) => removeParticipant(prev, participant.id))}
+                  className="rounded-full px-1 text-slate-muted hover:text-brand-violet focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+                  aria-label={`Remove ${participant.name}`}
                 >
                   ✕
                 </button>
@@ -106,7 +120,18 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
         open={assignOpen}
         onToggle={() => setAssignOpen((o) => !o)}
       >
-        <p className="mb-4 text-sm text-slate-muted">Pick an owner for each country.</p>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <p className="text-sm text-slate-muted">Pick an owner for each country.</p>
+          {assignedCount > 0 && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="nw-btn bg-white px-3 py-1.5 text-xs text-navy ring-1 ring-line hover:bg-mist"
+            >
+              ↺ Reset draw
+            </button>
+          )}
+        </div>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {GROUPS.map((group) => (
             <div key={group.name}>
@@ -122,22 +147,19 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
                       <Flag iso={team.iso} className="text-lg" title={team.name} />
                       <span className="flex-1 truncate text-sm font-semibold">{team.name}</span>
                       <select
+                        aria-label={`Owner of ${team.name}`}
                         value={owner ?? ''}
                         onChange={(e) =>
                           setState((prev) =>
-                            setAssignment(
-                              prev,
-                              teamId,
-                              e.target.value === '' ? null : Number(e.target.value),
-                            ),
+                            setAssignment(prev, teamId, e.target.value === '' ? null : e.target.value),
                           )
                         }
-                        className="max-w-[8.5rem] rounded-lg border border-line bg-white px-2 py-1 text-xs font-semibold focus:border-brand-cyan focus:outline-none"
+                        className="max-w-[8.5rem] rounded-lg border border-line bg-white px-2 py-1 text-xs font-semibold focus:border-brand-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
                       >
                         <option value="">— unassigned —</option>
                         {state.participants.map((p, i) => (
-                          <option key={i} value={i}>
-                            {p || `Player ${i + 1}`}
+                          <option key={p.id} value={p.id}>
+                            {p.name || `Player ${i + 1}`}
                           </option>
                         ))}
                       </select>
@@ -151,16 +173,26 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
       </CollapsibleCard>
 
       {/* Share */}
-      <section className="nw-card flex flex-col items-start gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+      <section className="nw-card space-y-3 p-6">
         <div>
           <h2 className="text-xl">Share the sweepstake</h2>
           <p className="mt-1 text-sm text-slate-muted">
             Everything is stored in the link — copy it to share the draw with everyone.
           </p>
         </div>
-        <button type="button" className="nw-btn-primary" onClick={handleCopy}>
-          {copied ? '✓ Copied!' : '🔗 Copy shareable link'}
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            type="text"
+            readOnly
+            value={shareUrl}
+            aria-label="Shareable sweepstake link"
+            onFocus={(e) => e.currentTarget.select()}
+            className="min-w-0 flex-1 rounded-full border border-line bg-mist px-4 py-2.5 text-sm text-slate-muted focus:border-brand-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
+          />
+          <button type="button" className="nw-btn-primary shrink-0" onClick={handleCopy}>
+            {copied ? '✓ Copied!' : '🔗 Copy link'}
+          </button>
+        </div>
       </section>
     </div>
   )

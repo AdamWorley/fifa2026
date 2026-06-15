@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { encodeState, writeStateToUrl } from './urlState'
 import { writeTabToPath } from './tabs'
 
-const sample = { participants: ['Alice'], assignments: { brazil: 0 } }
+const sample = { participants: [{ id: 'al', name: 'Alice' }], assignments: { brazil: 'al' } }
 
 beforeEach(() => {
   window.history.replaceState(null, '', `/?s=${encodeState(sample)}`)

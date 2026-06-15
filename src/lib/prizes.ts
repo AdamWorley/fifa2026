@@ -40,7 +40,7 @@ export interface PrizeStanding {
   value: number | null
   /** True for the group-stage awards once the group stage is complete. */
   final: boolean
-  ownerIndex: number | null
+  ownerId: string | null
 }
 
 /** Resolve which team currently holds each prize, and who owns that team. */
@@ -76,7 +76,7 @@ export function computePrizeStandings(
       teamId: entry.teamId,
       value: entry.value,
       final: entry.final,
-      ownerIndex: entry.teamId ? ownerOf(state, entry.teamId) : null,
+      ownerId: entry.teamId ? ownerOf(state, entry.teamId) : null,
     }
   })
 }
@@ -90,7 +90,7 @@ export interface LeaderboardTeam {
 }
 
 export interface LeaderboardEntry {
-  index: number
+  id: string
   name: string
   teams: LeaderboardTeam[]
   /** Total group-stage match points across all owned teams (ranking score). */
@@ -103,7 +103,7 @@ export function buildLeaderboard(
   prizeStandings: PrizeStanding[],
   teamStats: Map<TeamId, TeamStats>,
 ): LeaderboardEntry[] {
-  const teamsByIdx = teamsByParticipant(state)
+  const teamsByOwner = teamsByParticipant(state)
   const prizesByTeam = new Map<TeamId, PrizeDef[]>()
   for (const p of prizeStandings) {
     if (p.teamId === null) continue
@@ -112,8 +112,8 @@ export function buildLeaderboard(
   }
 
   return state.participants
-    .map((name, index) => {
-      const teams = (teamsByIdx.get(index) ?? [])
+    .map((participant, index) => {
+      const teams = (teamsByOwner.get(participant.id) ?? [])
         .filter((teamId) => (teamStats.get(teamId)?.played ?? 0) > 0)
         .map((teamId) => ({
           teamId,
@@ -121,8 +121,8 @@ export function buildLeaderboard(
           prizes: prizesByTeam.get(teamId) ?? [],
         }))
       return {
-        index,
-        name: name || `Player ${index + 1}`,
+        id: participant.id,
+        name: participant.name || `Player ${index + 1}`,
         teams,
         points: teams.reduce((sum, t) => sum + t.points, 0),
       }

@@ -30,13 +30,18 @@ const stats = new Map<TeamId, TeamStats>([
 // Alice owns Brazil (6) plus Scotland (no matches played yet), Bob owns
 // Argentina (9), Carol owns France (9), Dave owns nothing.
 const state: SweepstakeState = {
-  participants: ['Alice', 'Bob', 'Carol', 'Dave'],
-  assignments: { brazil: 0, scotland: 0, argentina: 1, france: 2 },
+  participants: [
+    { id: 'al', name: 'Alice' },
+    { id: 'bo', name: 'Bob' },
+    { id: 'ca', name: 'Carol' },
+    { id: 'da', name: 'Dave' },
+  ],
+  assignments: { brazil: 'al', scotland: 'al', argentina: 'bo', france: 'ca' },
 }
 
 const champion = PRIZES.find((p) => p.key === 'champion')!
 const prizeStandings: PrizeStanding[] = [
-  { def: champion, teamId: 'argentina', value: null, final: true, ownerIndex: 1 },
+  { def: champion, teamId: 'argentina', value: null, final: true, ownerId: 'bo' },
 ]
 
 describe('leaderboard', () => {
