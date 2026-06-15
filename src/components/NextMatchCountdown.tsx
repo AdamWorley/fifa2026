@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { upcomingMatches, type MatchResult } from '../lib/results'
+import { matchPhase, upcomingMatches, type MatchResult } from '../lib/results'
 
 interface Props {
   matches: MatchResult[]
 }
 
 function pickNext(matches: MatchResult[], now: number): { match: MatchResult; live: boolean } | null {
-  const live = matches.find((m) => m.status === 'live')
+  // A match in play wins; the feed never sends 'live', so derive it from kickoff vs now.
+  const live = matches.find((m) => matchPhase(m, now) === 'now')
   if (live) return { match: live, live: true }
   const upcoming = upcomingMatches(matches, now)
   return upcoming.length ? { match: upcoming[0], live: false } : null
