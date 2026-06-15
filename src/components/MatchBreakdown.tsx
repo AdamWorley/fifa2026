@@ -72,6 +72,15 @@ export default function MatchBreakdown({ matches, state }: Readonly<Props>) {
     return map
   }, [matches, filter])
 
+  const upcoming = useMemo(
+    () =>
+      matches
+        .filter((m) => m.status === 'scheduled')
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(0, 3),
+    [matches],
+  )
+
   const total = matches.length
   const shown = [...byStage.values()].reduce((n, list) => n + list.length, 0)
 
@@ -81,6 +90,19 @@ export default function MatchBreakdown({ matches, state }: Readonly<Props>) {
       <p className="mb-4 text-sm text-slate-muted">
         Every fixture with scores, status and disciplinary cards. Owned teams show their participant.
       </p>
+
+      {upcoming.length > 0 && (
+        <section className="mb-8">
+          <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-slate-muted">
+            Next up
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {upcoming.map((m) => (
+              <MatchCard key={m.id} match={m} state={state} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="mb-6 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
