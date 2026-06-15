@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { getTeam, STAGE_LABELS, type Stage } from '../data/tournament'
 import { resolveTeamId } from '../lib/aliases'
-import { ownerOf } from '../lib/sweepstake'
+import { getParticipant, ownerOf } from '../lib/sweepstake'
 import { formatUtcOffset, type MatchResult, type MatchStatus, type TeamCards } from '../lib/results'
 import type { SweepstakeState } from '../lib/urlState'
 import OwnerPill from './OwnerPill'
@@ -10,6 +10,7 @@ import Flag from './Flag'
 interface Props {
   matches: MatchResult[]
   state: SweepstakeState
+  meId?: string | null
 }
 
 const STAGE_ORDER: Stage[] = [
@@ -83,7 +84,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'scheduled', label: 'Upcoming' },
 ]
 
-export default function MatchBreakdown({ matches, state }: Readonly<Props>) {
+export default function MatchBreakdown({ matches, state, meId }: Readonly<Props>) {
   const [filter, setFilter] = useState<Filter>('all')
 
   const byStage = useMemo(() => {
@@ -125,7 +126,7 @@ export default function MatchBreakdown({ matches, state }: Readonly<Props>) {
           </h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {upcoming.map((m) => (
-              <MatchCard key={m.id} match={m} state={state} />
+              <MatchCard key={m.id} match={m} state={state} meId={meId} />
             ))}
           </div>
         </section>
@@ -164,7 +165,7 @@ export default function MatchBreakdown({ matches, state }: Readonly<Props>) {
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {rows.map((m) => (
-                    <MatchCard key={m.id} match={m} state={state} />
+                    <MatchCard key={m.id} match={m} state={state} meId={meId} />
                   ))}
                 </div>
               </section>
@@ -188,7 +189,11 @@ const STATUS_LABEL: Record<MatchStatus, string> = {
   scheduled: 'Upcoming',
 }
 
-function MatchCard({ match, state }: Readonly<{ match: MatchResult; state: SweepstakeState }>) {
+function MatchCard({
+  match,
+  state,
+  meId,
+}: Readonly<{ match: MatchResult; state: SweepstakeState; meId?: string | null }>) {
   const homeWon = match.score ? match.score.home > match.score.away : false
   const awayWon = match.score ? match.score.away > match.score.home : false
   const date = match.kickoff ? formatLocal(match.kickoff) : formatDateOnly(match.date)
@@ -213,6 +218,7 @@ function MatchCard({ match, state }: Readonly<{ match: MatchResult; state: Sweep
         cards={match.cards.home}
         winner={homeWon}
         state={state}
+        meId={meId}
       />
       <div className="my-1 border-t border-line/60" />
       <Side
@@ -221,6 +227,7 @@ function MatchCard({ match, state }: Readonly<{ match: MatchResult; state: Sweep
         cards={match.cards.away}
         winner={awayWon}
         state={state}
+        meId={meId}
       />
     </div>
   )
@@ -232,16 +239,19 @@ function Side({
   cards,
   winner,
   state,
+  meId,
 }: Readonly<{
   teamName: string
   goals: number | null
   cards: TeamCards
   winner: boolean
   state: SweepstakeState
+  meId?: string | null
 }>) {
   const teamId = resolveTeamId(teamName)
   const team = getTeam(teamId)
-  const owner = teamId ? ownerOf(state, teamId) : null
+  const ownerId = teamId ? ownerOf(state, teamId) : null
+  const owner = ownerId ? getParticipant(state, ownerId) : null
   return (
     <div className="flex items-center gap-2">
       <Flag iso={team?.iso ?? null} className="text-base" title={team?.name} />
@@ -249,9 +259,9 @@ function Side({
         <span className={`truncate ${winner ? 'font-black text-navy' : 'font-semibold text-slate-muted'}`}>
           {team?.name ?? teamName}
         </span>
-        {owner !== null && (
+        {owner && (
           <span className="ml-1.5 align-middle">
-            <OwnerPill name={state.participants[owner]} index={owner} />
+            <OwnerPill participant={owner} you={owner.id === meId} />
           </span>
         )}
       </div>
@@ -269,13 +279,21 @@ function Cards({ cards }: Readonly<{ cards: TeamCards }>) {
   return (
     <span className="flex shrink-0 items-center gap-1 text-xs font-bold tabular-nums">
       {cards.yellow > 0 && (
-        <span className="inline-flex items-center gap-0.5 text-amber-600" title={`${cards.yellow} yellow`}>
+        <span
+          className="inline-flex items-center gap-0.5 text-amber-600"
+          title={`${cards.yellow} yellow`}
+          aria-label={`${cards.yellow} yellow cards`}
+        >
           <span className="h-3 w-2 rounded-[1px] bg-amber-400" aria-hidden />
           {cards.yellow}
         </span>
       )}
       {cards.red > 0 && (
-        <span className="inline-flex items-center gap-0.5 text-red-600" title={`${cards.red} red`}>
+        <span
+          className="inline-flex items-center gap-0.5 text-red-600"
+          title={`${cards.red} red`}
+          aria-label={`${cards.red} red cards`}
+        >
           <span className="h-3 w-2 rounded-[1px] bg-red-500" aria-hidden />
           {cards.red}
         </span>

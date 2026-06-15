@@ -1,14 +1,20 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
 import type { TeamId } from '../data/tournament'
 
+/** A person in the sweepstake, identified by a stable id (never their position). */
+export interface Participant {
+  id: string
+  name: string
+}
+
 /** The entire sweepstake lives in the URL — no server, no database. */
 export interface SweepstakeState {
   /** Display name of the sweepstake (optional). */
   title?: string
-  /** Participant names, indexed by position. */
-  participants: string[]
-  /** teamId -> index into `participants`. Absent = unassigned. */
-  assignments: Record<TeamId, number>
+  /** Participants, in display order. Identity is `id`, not array position. */
+  participants: Participant[]
+  /** teamId -> owning participant id. Absent = unassigned. */
+  assignments: Record<TeamId, string>
 }
 
 const PARAM = 's'
@@ -19,29 +25,43 @@ export const EMPTY_STATE: SweepstakeState = {
 }
 
 // Compact wire format keeps shared URLs short:
-//   { t: title, p: [names], a: { teamId: participantIndex } }
+//   { t: title, p: [[id, name], …], a: { teamId: participantId } }
+// Legacy links (p: [names], a: { teamId: index }) are still decoded, mapping
+// positions onto synthesised ids so old shares degrade gracefully.
+type WireParticipant = [string, string] | string
+
 interface WireState {
   t?: string
-  p: string[]
-  a: Record<string, number>
+  p: WireParticipant[]
+  a: Record<string, string | number>
 }
 
 function toWire(state: SweepstakeState): WireState {
-  const wire: WireState = { p: state.participants, a: state.assignments }
+  const wire: WireState = {
+    p: state.participants.map((p) => [p.id, p.name] as [string, string]),
+    a: state.assignments,
+  }
   if (state.title) wire.t = state.title
   return wire
 }
 
 function fromWire(wire: WireState): SweepstakeState {
-  const participants = Array.isArray(wire.p) ? wire.p.map(String) : []
-  const assignments: Record<string, number> = {}
+  const rawParticipants = Array.isArray(wire.p) ? wire.p : []
+  const participants: Participant[] = rawParticipants.map((entry, i) =>
+    Array.isArray(entry)
+      ? { id: String(entry[0]), name: String(entry[1]) }
+      : { id: `p${i}`, name: String(entry) }, // legacy: position-based id
+  )
+  const idByPosition = participants.map((p) => p.id)
+  const validIds = new Set(idByPosition)
+
+  const assignments: Record<string, string> = {}
   if (wire.a && typeof wire.a === 'object') {
-    for (const [teamId, idx] of Object.entries(wire.a)) {
-      const n = Number(idx)
+    for (const [teamId, ref] of Object.entries(wire.a)) {
+      // New links carry the participant id; legacy links carry an index.
+      const id = typeof ref === 'number' ? idByPosition[ref] : String(ref)
       // Drop assignments that point at a participant who no longer exists.
-      if (Number.isInteger(n) && n >= 0 && n < participants.length) {
-        assignments[teamId] = n
-      }
+      if (id !== undefined && validIds.has(id)) assignments[teamId] = id
     }
   }
   return {

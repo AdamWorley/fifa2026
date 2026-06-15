@@ -1,4 +1,5 @@
 import { getTeam } from '../data/tournament'
+import { getParticipant } from '../lib/sweepstake'
 import type { SweepstakeState } from '../lib/urlState'
 import type { PrizeStanding } from '../lib/prizes'
 import OwnerPill from './OwnerPill'
@@ -7,6 +8,7 @@ import Flag from './Flag'
 interface Props {
   prizeStandings: PrizeStanding[]
   state: SweepstakeState
+  meId?: string | null
 }
 
 function valueLabel(key: string, value: number | null): string | null {
@@ -23,18 +25,23 @@ function valueLabel(key: string, value: number | null): string | null {
   }
 }
 
-export default function AwardsBoard({ prizeStandings, state }: Readonly<Props>) {
+export default function AwardsBoard({ prizeStandings, state, meId }: Readonly<Props>) {
   return (
     <div>
       <h2 className="mb-1 text-xl">Awards &amp; prizes</h2>
-      <p className="mb-4 text-sm text-slate-muted">
-        1st &amp; 2nd go to the World Cup finalists&apos; owners. The group-stage awards show the
-        current leader and lock in once all 72 group matches are played.
+      <p className="mb-1 text-sm text-slate-muted">
+        1st &amp; 2nd go to the World Cup finalists&apos; owners. The group-stage awards show a
+        <span className="font-semibold"> provisional</span> leader and <span aria-hidden>🔒</span>{' '}
+        <span className="font-semibold">lock in</span> once all 72 group matches are played.
+      </p>
+      <p className="mb-4 text-xs italic text-slate-muted/80">
+        Card counts (Referee&apos;s Favourite) are filled best-effort from public match data and may
+        be incomplete until results settle.
       </p>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {prizeStandings.map((p) => {
           const team = getTeam(p.teamId)
-          const owner = p.ownerIndex
+          const owner = p.ownerId ? getParticipant(state, p.ownerId) : null
           const value = valueLabel(p.def.key, p.value)
           return (
             <div key={p.def.key} className="nw-card flex flex-col p-5">
@@ -47,8 +54,9 @@ export default function AwardsBoard({ prizeStandings, state }: Readonly<Props>) 
                     className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${
                       p.final ? 'bg-brand-violet text-white' : 'bg-line text-slate-muted'
                     }`}
+                    title={p.final ? 'Locked in — group stage complete' : 'Provisional — still being played'}
                   >
-                    {p.final ? 'Final' : 'Current leader'}
+                    {p.final ? '🔒 Final' : 'Provisional'}
                   </span>
                 )}
               </div>
@@ -67,10 +75,7 @@ export default function AwardsBoard({ prizeStandings, state }: Readonly<Props>) 
                     </div>
                     <div className="mt-2 flex items-center gap-2 text-sm">
                       <span className="text-slate-muted">Owner:</span>
-                      <OwnerPill
-                        name={owner === null ? null : state.participants[owner]}
-                        index={owner}
-                      />
+                      <OwnerPill participant={owner} you={!!owner && owner.id === meId} />
                     </div>
                   </>
                 ) : (

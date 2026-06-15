@@ -1,19 +1,23 @@
 import type { TeamId } from '../data/tournament'
-import type { SweepstakeState } from './urlState'
+import type { Participant, SweepstakeState } from './urlState'
 
-/** Index into participants for the owner of a team, or null if unassigned. */
-export function ownerOf(state: SweepstakeState, teamId: TeamId): number | null {
-  const idx = state.assignments[teamId]
-  return idx === undefined ? null : idx
+/** Look up a participant by id. */
+export function getParticipant(state: SweepstakeState, id: string): Participant | undefined {
+  return state.participants.find((p) => p.id === id)
 }
 
-/** teamIds owned by each participant, keyed by participant index. */
-export function teamsByParticipant(state: SweepstakeState): Map<number, TeamId[]> {
-  const map = new Map<number, TeamId[]>()
-  state.participants.forEach((_, i) => map.set(i, []))
-  for (const [teamId, idx] of Object.entries(state.assignments)) {
-    if (!map.has(idx)) map.set(idx, [])
-    map.get(idx)!.push(teamId)
+/** Id of the participant owning a team, or null if unassigned. */
+export function ownerOf(state: SweepstakeState, teamId: TeamId): string | null {
+  return state.assignments[teamId] ?? null
+}
+
+/** teamIds owned by each participant, keyed by participant id. */
+export function teamsByParticipant(state: SweepstakeState): Map<string, TeamId[]> {
+  const map = new Map<string, TeamId[]>()
+  state.participants.forEach((p) => map.set(p.id, []))
+  for (const [teamId, id] of Object.entries(state.assignments)) {
+    if (!map.has(id)) map.set(id, [])
+    map.get(id)!.push(teamId)
   }
   return map
 }
@@ -21,41 +25,62 @@ export function teamsByParticipant(state: SweepstakeState): Map<number, TeamId[]
 export function setAssignment(
   state: SweepstakeState,
   teamId: TeamId,
-  participantIndex: number | null,
+  participantId: string | null,
 ): SweepstakeState {
   const assignments = { ...state.assignments }
-  if (participantIndex === null) {
+  if (participantId === null) {
     delete assignments[teamId]
   } else {
-    assignments[teamId] = participantIndex
+    assignments[teamId] = participantId
   }
   return { ...state, assignments }
 }
 
-export function addParticipant(state: SweepstakeState, name: string): SweepstakeState {
+/** Generate a short, URL-friendly id not already used by a participant. */
+export function newParticipantId(
+  state: SweepstakeState,
+  random: () => number = Math.random,
+): string {
+  const used = new Set(state.participants.map((p) => p.id))
+  for (;;) {
+    const id = Math.floor(random() * 0x7fffffff).toString(36)
+    if (id && !used.has(id)) return id
+  }
+}
+
+export function addParticipant(
+  state: SweepstakeState,
+  name: string,
+  random: () => number = Math.random,
+): SweepstakeState {
   const trimmed = name.trim()
   if (!trimmed) return state
-  return { ...state, participants: [...state.participants, trimmed] }
+  const participant: Participant = { id: newParticipantId(state, random), name: trimmed }
+  return { ...state, participants: [...state.participants, participant] }
 }
 
 export function renameParticipant(
   state: SweepstakeState,
-  index: number,
+  id: string,
   name: string,
 ): SweepstakeState {
-  const participants = state.participants.map((p, i) => (i === index ? name : p))
+  const participants = state.participants.map((p) => (p.id === id ? { ...p, name } : p))
   return { ...state, participants }
 }
 
-/** Remove a participant and re-index assignments (shifting higher indices down). */
-export function removeParticipant(state: SweepstakeState, index: number): SweepstakeState {
-  const participants = state.participants.filter((_, i) => i !== index)
-  const assignments: Record<TeamId, number> = {}
-  for (const [teamId, idx] of Object.entries(state.assignments)) {
-    if (idx === index) continue
-    assignments[teamId] = idx > index ? idx - 1 : idx
+/** Remove a participant and drop any teams they owned (ids stay stable for everyone else). */
+export function removeParticipant(state: SweepstakeState, id: string): SweepstakeState {
+  const participants = state.participants.filter((p) => p.id !== id)
+  const assignments: Record<TeamId, string> = {}
+  for (const [teamId, ownerId] of Object.entries(state.assignments)) {
+    if (ownerId !== id) assignments[teamId] = ownerId
   }
   return { ...state, participants, assignments }
+}
+
+/** Unassign every team, keeping the participant list intact (a "reset the draw"). */
+export function clearAssignments(state: SweepstakeState): SweepstakeState {
+  return { ...state, assignments: {} }
 }
 
 /**
@@ -73,9 +98,9 @@ export function randomDraw(
     const j = Math.floor(random() * (i + 1))
     ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
-  const assignments: Record<TeamId, number> = {}
+  const assignments: Record<TeamId, string> = {}
   shuffled.forEach((teamId, i) => {
-    assignments[teamId] = i % state.participants.length
+    assignments[teamId] = state.participants[i % state.participants.length].id
   })
   return { ...state, assignments }
 }

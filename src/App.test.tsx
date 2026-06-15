@@ -4,7 +4,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import App from './App'
 import { encodeState } from './lib/urlState'
 
-const encoded = encodeState({ participants: ['Alice'], assignments: { brazil: 0 } })
+const encoded = encodeState({ participants: [{ id: 'al', name: 'Alice' }], assignments: { brazil: 'al' } })
 
 // useResults fetches /api/results and /overrides.json — stub them.
 vi.stubGlobal(
@@ -22,7 +22,7 @@ describe('App tab navigation', () => {
       render(<App />)
     })
 
-    const groupsTab = screen.getByRole('button', { name: 'Groups' })
+    const groupsTab = screen.getByRole('tab', { name: 'Groups' })
     await act(async () => {
       groupsTab.click()
     })

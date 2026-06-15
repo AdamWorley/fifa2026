@@ -1,5 +1,5 @@
 import { getTeam } from '../data/tournament'
-import { ownerOf } from '../lib/sweepstake'
+import { getParticipant, ownerOf } from '../lib/sweepstake'
 import type { SweepstakeState } from '../lib/urlState'
 import type { GroupStanding } from '../lib/standings'
 import OwnerPill from './OwnerPill'
@@ -9,9 +9,15 @@ interface Props {
   standings: GroupStanding[]
   state: SweepstakeState
   groupMatchesPlayed: number
+  meId?: string | null
 }
 
-export default function GroupsBoard({ standings, state, groupMatchesPlayed }: Readonly<Props>) {
+export default function GroupsBoard({
+  standings,
+  state,
+  groupMatchesPlayed,
+  meId,
+}: Readonly<Props>) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -22,14 +28,18 @@ export default function GroupsBoard({ standings, state, groupMatchesPlayed }: Re
       </div>
       <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
         {standings.map((group) => (
-          <GroupTable key={group.name} group={group} state={state} />
+          <GroupTable key={group.name} group={group} state={state} meId={meId} />
         ))}
       </div>
     </div>
   )
 }
 
-function GroupTable({ group, state }: Readonly<{ group: GroupStanding; state: SweepstakeState }>) {
+function GroupTable({
+  group,
+  state,
+  meId,
+}: Readonly<{ group: GroupStanding; state: SweepstakeState; meId?: string | null }>) {
   return (
     <div className="nw-card overflow-hidden">
       <div className="bg-navy px-4 py-2.5 text-sm font-black uppercase tracking-wide text-white">
@@ -53,7 +63,8 @@ function GroupTable({ group, state }: Readonly<{ group: GroupStanding; state: Sw
         <tbody>
           {group.rows.map((row, i) => {
             const team = getTeam(row.teamId)!
-            const owner = ownerOf(state, row.teamId)
+            const ownerId = ownerOf(state, row.teamId)
+            const owner = ownerId ? getParticipant(state, ownerId) : null
             const advancing = i < 2
             return (
               <tr
@@ -70,9 +81,9 @@ function GroupTable({ group, state }: Readonly<{ group: GroupStanding; state: Sw
                     <Flag iso={team.iso} className="text-base" title={team.name} />
                     <div className="min-w-0">
                       <div className="truncate font-semibold text-navy">{team.name}</div>
-                      {owner !== null && (
+                      {owner && (
                         <div className="mt-0.5">
-                          <OwnerPill name={state.participants[owner]} index={owner} />
+                          <OwnerPill participant={owner} you={owner.id === meId} />
                         </div>
                       )}
                     </div>
