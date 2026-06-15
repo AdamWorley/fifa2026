@@ -113,11 +113,13 @@ export function buildLeaderboard(
 
   return state.participants
     .map((name, index) => {
-      const teams = (teamsByIdx.get(index) ?? []).map((teamId) => ({
-        teamId,
-        points: teamStats.get(teamId)?.points ?? 0,
-        prizes: prizesByTeam.get(teamId) ?? [],
-      }))
+      const teams = (teamsByIdx.get(index) ?? [])
+        .filter((teamId) => (teamStats.get(teamId)?.played ?? 0) > 0)
+        .map((teamId) => ({
+          teamId,
+          points: teamStats.get(teamId)?.points ?? 0,
+          prizes: prizesByTeam.get(teamId) ?? [],
+        }))
       return {
         index,
         name: name || `Player ${index + 1}`,

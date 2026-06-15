@@ -4,10 +4,10 @@ import { buildLeaderboard, PRIZES, type PrizeStanding } from './prizes'
 import type { TeamStats } from './standings'
 import type { SweepstakeState } from './urlState'
 
-function stat(teamId: TeamId, points: number): TeamStats {
+function stat(teamId: TeamId, points: number, played = 2): TeamStats {
   return {
     teamId,
-    played: 0,
+    played,
     won: 0,
     drawn: 0,
     lost: 0,
@@ -27,10 +27,11 @@ const stats = new Map<TeamId, TeamStats>([
   ['france', stat('france', 9)],
 ])
 
-// Alice owns Brazil (6), Bob owns Argentina (9), Carol owns France (9), Dave owns nothing.
+// Alice owns Brazil (6) plus Scotland (no matches played yet), Bob owns
+// Argentina (9), Carol owns France (9), Dave owns nothing.
 const state: SweepstakeState = {
   participants: ['Alice', 'Bob', 'Carol', 'Dave'],
-  assignments: { brazil: 0, argentina: 1, france: 2 },
+  assignments: { brazil: 0, scotland: 0, argentina: 1, france: 2 },
 }
 
 const champion = PRIZES.find((p) => p.key === 'champion')!
@@ -56,6 +57,13 @@ describe('leaderboard', () => {
 
     const alice = board.find((e) => e.name === 'Alice')!
     expect(alice.teams[0].prizes).toEqual([])
+  })
+
+  it('omits teams that have not played any matches', () => {
+    const board = buildLeaderboard(state, prizeStandings, stats)
+    const alice = board.find((e) => e.name === 'Alice')!
+    // Scotland has no entry in stats (no matches played) so it is excluded.
+    expect(alice.teams.map((t) => t.teamId)).toEqual(['brazil'])
   })
 
   it('gives participants with no teams a zero score and no teams', () => {
