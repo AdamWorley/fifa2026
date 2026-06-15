@@ -36,7 +36,7 @@ export default function Leaderboard({ leaderboard, meId }: Readonly<Props>) {
 
   if (leaderboard.length === 0) {
     return (
-      <div className="nw-card p-6 text-sm text-slate-muted">
+      <div className="max-w-3xl nw-card p-6 text-sm text-slate-muted">
         Today's your day — add participants and assign teams above to build the
         leaderboard. 🎶
       </div>
@@ -44,7 +44,7 @@ export default function Leaderboard({ leaderboard, meId }: Readonly<Props>) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="max-w-3xl space-y-3">
       <div>
         <h2 className="text-xl">Leaderboard</h2>
         <p className="text-xs font-semibold italic text-slate-muted">
