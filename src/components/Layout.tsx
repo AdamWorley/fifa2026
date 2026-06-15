@@ -28,6 +28,9 @@ function Footer() {
           Office sweepstake tracker · results update automatically · not affiliated with FIFA.
         </p>
         <p className="text-xs text-slate-muted/80">“Feel confident about tomorrow.”</p>
+        <p className="text-xs italic text-slate-muted/80">
+          🎶 Tsamina mina, eh eh — waka waka, eh eh. This time for 2026.
+        </p>
       </div>
     </footer>
   )
