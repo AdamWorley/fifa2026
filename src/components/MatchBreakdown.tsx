@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { getTeam, STAGE_LABELS, type Stage } from '../data/tournament'
 import { resolveTeamId } from '../lib/aliases'
 import { ownerOf } from '../lib/sweepstake'
-import type { MatchResult, MatchStatus, TeamCards } from '../lib/results'
+import { formatUtcOffset, type MatchResult, type MatchStatus, type TeamCards } from '../lib/results'
 import type { SweepstakeState } from '../lib/urlState'
 import OwnerPill from './OwnerPill'
 import Flag from './Flag'
@@ -34,16 +34,43 @@ function stageKey(raw: string): Stage {
   return 'group'
 }
 
-function formatDate(iso: string): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString(undefined, {
+const DATE_TIME_OPTS: Intl.DateTimeFormatOptions = {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+}
+
+/** Kickoff in the viewer's own time zone. */
+function formatLocal(kickoff: string): string {
+  const d = new Date(kickoff)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleString(undefined, DATE_TIME_OPTS)
+}
+
+/** Kickoff in the host venue's local time, e.g. "Thu, 11 Jun, 13:00 · Mexico City (UTC-6)". */
+function formatVenue(kickoff: string, offsetMinutes: number, venue: string): string {
+  const ms = new Date(kickoff).getTime()
+  if (Number.isNaN(ms)) return ''
+  // Shift the instant by the venue offset, then read it back as UTC to recover
+  // the venue's wall-clock time without depending on an IANA tz database.
+  const wall = new Date(ms + offsetMinutes * 60_000)
+  const time = wall.toLocaleString(undefined, { ...DATE_TIME_OPTS, timeZone: 'UTC' })
+  const where = venue ? `${venue} · ` : ''
+  return `${time} (${where}${formatUtcOffset(offsetMinutes)})`
+}
+
+/** Fallback for matches with no kickoff time — show the date without a zone shift. */
+function formatDateOnly(date: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
+  if (!m) return date
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+  return d.toLocaleDateString(undefined, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
+    timeZone: 'UTC',
   })
 }
 
@@ -164,12 +191,18 @@ const STATUS_LABEL: Record<MatchStatus, string> = {
 function MatchCard({ match, state }: Readonly<{ match: MatchResult; state: SweepstakeState }>) {
   const homeWon = match.score ? match.score.home > match.score.away : false
   const awayWon = match.score ? match.score.away > match.score.home : false
-  const date = formatDate(match.date)
+  const date = match.kickoff ? formatLocal(match.kickoff) : formatDateOnly(match.date)
+  const venueTime =
+    match.kickoff != null && match.venueOffsetMinutes != null
+      ? `Venue time: ${formatVenue(match.kickoff, match.venueOffsetMinutes, match.venue ?? '')}`
+      : undefined
 
   return (
     <div className="nw-card p-3 text-sm">
       <div className="mb-2 flex items-center justify-between gap-2 text-xs">
-        <span className="truncate text-slate-muted">{date}</span>
+        <span className="truncate text-slate-muted" title={venueTime}>
+          {date}
+        </span>
         <span className={`shrink-0 rounded-full px-2 py-0.5 font-bold ${STATUS_BADGE[match.status]}`}>
           {STATUS_LABEL[match.status]}
         </span>
