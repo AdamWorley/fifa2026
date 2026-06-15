@@ -9,6 +9,13 @@ interface Props {
   meId?: string | null
 }
 
+/** Medal for the top three finishers; null beyond third. */
+const MEDALS = [
+  { emoji: '🥇', label: '1st place' },
+  { emoji: '🥈', label: '2nd place' },
+  { emoji: '🥉', label: '3rd place' },
+]
+
 /** ▲n / ▼n / — movement indicator for a rank delta (positive = moved up). */
 function Movement({ delta }: Readonly<{ delta: number | undefined }>) {
   if (delta === undefined || delta === 0) {
@@ -61,7 +68,13 @@ export default function Leaderboard({ leaderboard, meId }: Readonly<Props>) {
             >
               <div className="flex items-center gap-3">
                 <span className="flex w-6 shrink-0 flex-col items-center text-lg font-black text-slate-muted">
-                  {position + 1}
+                  {MEDALS[position] ? (
+                    <span className="text-xl leading-none" role="img" aria-label={MEDALS[position].label}>
+                      {MEDALS[position].emoji}
+                    </span>
+                  ) : (
+                    position + 1
+                  )}
                   <Movement delta={moves.get(entry.id)} />
                 </span>
                 <span
