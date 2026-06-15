@@ -19,9 +19,12 @@ export default function Leaderboard({ leaderboard }: Readonly<Props>) {
   return (
     <div className="space-y-3">
       <h2 className="text-xl">Leaderboard</h2>
-      {leaderboard.map((entry) => (
+      {leaderboard.map((entry, position) => (
         <div key={entry.index} className="nw-card p-4">
           <div className="flex flex-wrap items-center gap-3">
+            <span className="w-6 shrink-0 text-center text-lg font-black text-slate-muted">
+              {position + 1}
+            </span>
             <span
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black text-white"
               style={{ background: participantColor(entry.index) }}
@@ -29,33 +32,29 @@ export default function Leaderboard({ leaderboard }: Readonly<Props>) {
               {entry.name.slice(0, 1).toUpperCase()}
             </span>
             <span className="text-lg font-black text-navy">{entry.name}</span>
-            <span className="text-xs font-semibold text-slate-muted">
-              {entry.teamIds.length} team{entry.teamIds.length === 1 ? '' : 's'}
+            <span className="ml-auto inline-flex items-baseline gap-1">
+              <span className="text-2xl font-black text-navy">{entry.points}</span>
+              <span className="text-xs font-semibold text-slate-muted">pts</span>
             </span>
-            <div className="ml-auto flex flex-wrap gap-1.5">
-              {entry.prizes.map((prize) => (
-                <span
-                  key={prize.key}
-                  className="inline-flex items-center gap-1 rounded-full bg-brand-violet/10 px-2.5 py-1 text-xs font-bold text-brand-violet"
-                  title={prize.blurb}
-                >
-                  {prize.emoji} {prize.label}
-                </span>
-              ))}
-            </div>
           </div>
 
-          {entry.teamIds.length > 0 && (
+          {entry.teams.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {entry.teamIds.map((teamId) => {
-                const team = getTeam(teamId)!
+              {entry.teams.map((team) => {
+                const t = getTeam(team.teamId)!
                 return (
                   <span
-                    key={teamId}
+                    key={team.teamId}
                     className="inline-flex items-center gap-1 rounded-lg bg-mist px-2 py-1 text-xs font-semibold ring-1 ring-line"
                   >
-                    <Flag iso={team.iso} className="text-sm" title={team.name} />
-                    {team.name}
+                    <Flag iso={t.iso} className="text-sm" title={t.name} />
+                    {t.name}
+                    <span className="font-black text-navy">{team.points}</span>
+                    {team.prizes.map((prize) => (
+                      <span key={prize.key} title={`${prize.label} — ${prize.blurb}`}>
+                        {prize.emoji}
+                      </span>
+                    ))}
                   </span>
                 )
               })}

@@ -1,7 +1,7 @@
 import type { TeamId } from '../data/tournament'
 import type { SweepstakeState } from './urlState'
 import { ownerOf, teamsByParticipant } from './sweepstake'
-import type { Awards, TournamentResult } from './standings'
+import type { Awards, TeamStats, TournamentResult } from './standings'
 
 export interface PrizeDef {
   key: string
@@ -81,33 +81,49 @@ export function computePrizeStandings(
   })
 }
 
-export interface LeaderboardEntry {
-  index: number
-  name: string
-  teamIds: TeamId[]
-  /** Prize labels this participant currently holds. */
+export interface LeaderboardTeam {
+  teamId: TeamId
+  /** Group-stage match points this team has earned. */
+  points: number
+  /** Prizes this team currently holds. */
   prizes: PrizeDef[]
 }
 
-/** Build a per-participant leaderboard, prize-holders first. */
+export interface LeaderboardEntry {
+  index: number
+  name: string
+  teams: LeaderboardTeam[]
+  /** Total group-stage match points across all owned teams (ranking score). */
+  points: number
+}
+
+/** Build a per-participant leaderboard, highest match-points total first. */
 export function buildLeaderboard(
   state: SweepstakeState,
   prizeStandings: PrizeStanding[],
+  teamStats: Map<TeamId, TeamStats>,
 ): LeaderboardEntry[] {
   const teamsByIdx = teamsByParticipant(state)
-  const prizesByIdx = new Map<number, PrizeDef[]>()
+  const prizesByTeam = new Map<TeamId, PrizeDef[]>()
   for (const p of prizeStandings) {
-    if (p.ownerIndex === null) continue
-    if (!prizesByIdx.has(p.ownerIndex)) prizesByIdx.set(p.ownerIndex, [])
-    prizesByIdx.get(p.ownerIndex)!.push(p.def)
+    if (p.teamId === null) continue
+    if (!prizesByTeam.has(p.teamId)) prizesByTeam.set(p.teamId, [])
+    prizesByTeam.get(p.teamId)!.push(p.def)
   }
 
   return state.participants
-    .map((name, index) => ({
-      index,
-      name: name || `Player ${index + 1}`,
-      teamIds: teamsByIdx.get(index) ?? [],
-      prizes: prizesByIdx.get(index) ?? [],
-    }))
-    .sort((a, b) => b.prizes.length - a.prizes.length || a.name.localeCompare(b.name))
+    .map((name, index) => {
+      const teams = (teamsByIdx.get(index) ?? []).map((teamId) => ({
+        teamId,
+        points: teamStats.get(teamId)?.points ?? 0,
+        prizes: prizesByTeam.get(teamId) ?? [],
+      }))
+      return {
+        index,
+        name: name || `Player ${index + 1}`,
+        teams,
+        points: teams.reduce((sum, t) => sum + t.points, 0),
+      }
+    })
+    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
 }

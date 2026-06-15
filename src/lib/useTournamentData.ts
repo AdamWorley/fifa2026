@@ -24,8 +24,8 @@ export function useTournamentData(state: SweepstakeState) {
     [state, awards, tournament],
   )
   const leaderboard = useMemo(
-    () => buildLeaderboard(state, prizeStandings),
-    [state, prizeStandings],
+    () => buildLeaderboard(state, prizeStandings, stats),
+    [state, prizeStandings, stats],
   )
   const groupMatchesPlayed = useMemo(() => countFinishedGroupMatches(matches), [matches])
 
