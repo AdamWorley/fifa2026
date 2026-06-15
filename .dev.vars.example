@@ -1,3 +1,0 @@
-# Copy to .dev.vars for local `wrangler pages dev` testing with live data.
-# .dev.vars is git-ignored. Never commit a real key.
-FOOTBALL_API_KEY=your-api-sports-io-key

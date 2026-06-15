@@ -26,36 +26,35 @@ npm run dev          # Vite dev server (UI only; /api/results returns empty)
 npm test             # unit tests (url state, assignments, standings, awards)
 ```
 
-To exercise the live results proxy locally you need the Cloudflare runtime:
+To exercise the results function (and KV) locally you need the Cloudflare runtime:
 
 ```bash
-cp .dev.vars.example .dev.vars     # then put your real key in .dev.vars
 npm run build
 npm run pages:dev                  # serves the built site + /api/results
 ```
 
-## Live results data
+## Results data
 
-Results are fetched from **[API-FOOTBALL](https://www.api-sports.io/)** (free
-tier covers World Cup 2026 fixtures, goals and card events). Sign up for a free
-key, then configure:
+Results come from the public-domain
+**[openfootball](https://github.com/openfootball/worldcup.json)** World Cup 2026
+dataset (`WC_DATA_URL` in `wrangler.toml`). The `/api/results` Pages Function
+fetches it, normalizes it, and stores it in the `RESULTS_KV` namespace; that
+stored copy is served instantly and refreshed in the background (~10 min) so no
+visitor request ever blocks on the upstream. No API key required.
 
-| Setting | Where | Purpose |
-| --- | --- | --- |
-| `FOOTBALL_API_KEY` | Cloudflare **secret** | api-sports.io key (server-side only) |
-| `FOOTBALL_LEAGUE_ID` | `wrangler.toml` `[vars]` | World Cup league id (default `1`) |
-| `FOOTBALL_SEASON` | `wrangler.toml` `[vars]` | Season year (default `2026`) |
+openfootball provides scores and goals (driving the standings, **Golden Boot**
+and **Wooden Spoon**) but **not card data**. For the **Referee's Favourite**
+award, add card counts to `public/overrides.json` — entries are matched by
+`home`/`away` team name and merged over the feed client-side (edit the file and
+redeploy; no code change). Overrides can also correct any wrong score.
 
-The proxy caches the aggregated payload for 60s and caches finished-match card
-stats for 24h, so visitor traffic never exhausts the free-tier quota.
+> Note: openfootball is community-maintained and updates roughly daily, so it is
+> not strictly live. To go fully live (and get card data automatically) you'd
+> need a paid feed such as [API-FOOTBALL](https://www.api-sports.io/) — the free
+> tier there does not include the 2026 season.
 
-> If the API is ever wrong or missing card data, hand-corrections can be added to
-> `public/overrides.json` (matched by `home`/`away` team name) — no code redeploy
-> required, just edit the file.
-
-The static fixtures/groups/bracket are seeded from the public-domain
-[openfootball](https://github.com/openfootball/worldcup.json) dataset
-(`src/data/*.source.json`); live scores and cards overlay on top of them.
+The static fixtures/groups/bracket are also seeded from openfootball
+(`src/data/*.source.json`); the live feed overlays scores on top.
 
 ## Deploy to Cloudflare Pages
 

@@ -2,17 +2,13 @@ name = "fifa2026-sweepstake"
 compatibility_date = "2026-06-01"
 pages_build_output_dir = "dist"
 
-# Secret (set with: npx wrangler pages secret put FOOTBALL_API_KEY)
-#   FOOTBALL_API_KEY = "<api-football key from api-sports.io>"
-#
-# Optional non-secret config via [vars]:
 [vars]
-# API-FOOTBALL league id for the FIFA World Cup, and the season year.
-FOOTBALL_LEAGUE_ID = "1"
-FOOTBALL_SEASON = "2026"
+# Source of truth for fixtures/scores — the public-domain openfootball dataset.
+# Override here if you point at a fork/mirror.
+WC_DATA_URL = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json"
 
-# Durable store for the latest normalized results (goals, cards, standings input).
-# The /api/results function reads from here and refreshes it from the API.
+# Durable store for the latest normalized results (goals → standings input).
+# The /api/results function reads from here and refreshes it in the background.
 [[kv_namespaces]]
 binding = "RESULTS_KV"
 id = "b7ced142b952494bbec0db08c55aab6d"

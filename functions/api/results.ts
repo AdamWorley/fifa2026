@@ -1,19 +1,19 @@
 /**
  * Cloudflare Pages Function: GET /api/results
  *
- * The latest normalized results (scores, goals, cards) are stored in a KV
- * namespace (RESULTS_KV). This function serves that stored copy instantly and
- * refreshes it from the football API in the background when it goes stale — so
- * visitor traffic never triggers blocking upstream calls and the API key/quota
- * stay server-side. KV is the durable store the worker writes through to.
+ * Fetches the public-domain openfootball World Cup 2026 dataset, normalizes it,
+ * and stores it in KV (RESULTS_KV). The stored copy is served instantly and
+ * refreshed in the background when stale, so visitor traffic never triggers
+ * blocking upstream calls. KV is the durable store the worker writes through to.
+ *
+ * openfootball provides scores/goals but NOT cards — the Referee's Favourite
+ * award is fed via public/overrides.json (merged client-side).
  *
  * Returns ResultsPayload (see src/lib/results.ts) — kept in sync by hand.
  *
- * Configure via wrangler / Pages dashboard:
- *   FOOTBALL_API_KEY   (secret)  — api-sports.io key
- *   FOOTBALL_LEAGUE_ID (var)     — World Cup league id (default "1")
- *   FOOTBALL_SEASON    (var)     — season year (default "2026")
- *   RESULTS_KV         (kv)      — durable store for the normalized payload
+ * Config (wrangler.toml):
+ *   WC_DATA_URL (var, optional) — override the source JSON URL
+ *   RESULTS_KV  (kv)            — durable store for the normalized payload
  */
 
 interface KVNamespace {
@@ -22,9 +22,7 @@ interface KVNamespace {
 }
 
 interface Env {
-  FOOTBALL_API_KEY?: string
-  FOOTBALL_LEAGUE_ID?: string
-  FOOTBALL_SEASON?: string
+  WC_DATA_URL?: string
   RESULTS_KV?: KVNamespace
 }
 
@@ -34,137 +32,60 @@ interface Ctx {
   waitUntil: (p: Promise<unknown>) => void
 }
 
-const API_BASE = 'https://v3.football.api-sports.io'
+const DEFAULT_DATA_URL =
+  'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json'
 
-// Serve the stored copy until it's older than this, then refresh in background.
-const REFRESH_MS = 60_000
-// Cap fresh statistics calls per refresh to protect the daily quota; finished
-// fixtures' cards are stored in KV and never re-fetched.
-const MAX_STATS_CALLS = 12
-
+// openfootball updates roughly daily; no need to refetch more often than this.
+const REFRESH_MS = 10 * 60_000
 const PAYLOAD_KEY = 'results:payload'
-const CARDS_KEY = 'results:cards'
 
-type Status = 'scheduled' | 'live' | 'finished'
-
-interface CardCount {
-  yellow: number
-  red: number
-}
-interface MatchCards {
-  home: CardCount
-  away: CardCount
+interface SourceMatch {
+  round?: string
+  num?: number
+  date?: string
+  team1?: string
+  team2?: string
+  group?: string
+  score?: { ft?: [number, number] }
 }
 
-function mapStatus(short: string): Status {
-  if (['FT', 'AET', 'PEN'].includes(short)) return 'finished'
-  if (['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT'].includes(short)) return 'live'
-  return 'scheduled'
+function dataUrl(env: Env): string {
+  return env.WC_DATA_URL || DEFAULT_DATA_URL
 }
 
-// Minimal shapes for the fields we read from API-FOOTBALL responses.
-interface ApiEnvelope<T> {
-  response?: T
-  // API-FOOTBALL returns HTTP 200 even for plan/auth problems, with details here.
-  results?: number
-  errors?: unknown
-  paging?: unknown
-}
-interface StatItem {
-  type?: string
-  value?: number | string | null
-}
-interface StatTeam {
-  statistics?: StatItem[]
-}
-interface ApiFixture {
-  fixture?: { id?: number; date?: string; status?: { short?: string } }
-  league?: { round?: string }
-  teams?: { home?: { name?: string }; away?: { name?: string } }
-  goals?: { home?: number | null; away?: number | null }
+async function fetchSource(env: Env): Promise<SourceMatch[]> {
+  const res = await fetch(dataUrl(env), {
+    headers: { 'user-agent': 'fifa2026-sweepstake' },
+    cf: { cacheTtl: 300 },
+  } as RequestInit)
+  if (!res.ok) throw new Error(`source ${res.status}`)
+  const data = (await res.json()) as { matches?: SourceMatch[] }
+  return data.matches ?? []
 }
 
-async function apiGet<T>(path: string, key: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { headers: { 'x-apisports-key': key } })
-  if (!res.ok) throw new Error(`upstream ${res.status} for ${path}`)
-  return res.json() as Promise<T>
-}
-
-async function fetchCards(fixtureId: number, key: string): Promise<MatchCards | null> {
-  const data = await apiGet<ApiEnvelope<StatTeam[]>>(
-    `/fixtures/statistics?fixture=${fixtureId}`,
-    key,
-  )
-  const teams = data.response ?? []
-  if (teams.length < 2) return null
-  const read = (team: StatTeam): CardCount => {
-    const stats = team.statistics ?? []
-    const find = (type: string) => Number(stats.find((s) => s.type === type)?.value ?? 0) || 0
-    return { yellow: find('Yellow Cards'), red: find('Red Cards') }
+function normalize(m: SourceMatch) {
+  const ft = m.score?.ft
+  const round = m.round ?? ''
+  const isGroupStage = Boolean(m.group) || round.startsWith('Matchday')
+  return {
+    id: String(m.num ?? `${m.date ?? ''}-${m.team1 ?? ''}-${m.team2 ?? ''}`),
+    stage: round,
+    isGroupStage,
+    date: m.date ?? '',
+    home: m.team1 ?? '',
+    away: m.team2 ?? '',
+    status: ft ? ('finished' as const) : ('scheduled' as const),
+    score: ft ? { home: ft[0], away: ft[1] } : null,
+    // openfootball has no card data; overrides.json can supply it client-side.
+    cards: { home: { yellow: 0, red: 0 }, away: { yellow: 0, red: 0 } },
   }
-  return { home: read(teams[0]), away: read(teams[1]) }
 }
 
-/** Fetch from the API, normalize, persist to KV, and return the payload. */
+/** Fetch the source, normalize, persist to KV, and return the payload. */
 async function refresh(env: Env): Promise<unknown> {
-  const key = env.FOOTBALL_API_KEY!
-  const league = env.FOOTBALL_LEAGUE_ID || '1'
-  const season = env.FOOTBALL_SEASON || '2026'
-  const kv = env.RESULTS_KV
-
-  const fixturesData = await apiGet<ApiEnvelope<ApiFixture[]>>(
-    `/fixtures?league=${league}&season=${season}`,
-    key,
-  )
-  const fixtures = fixturesData.response ?? []
-
-  // Load the persisted card tallies; only fetch ones we don't have yet.
-  let cardsMap: Record<string, MatchCards> = {}
-  if (kv) {
-    const raw = await kv.get(CARDS_KEY)
-    if (raw) cardsMap = JSON.parse(raw) as Record<string, MatchCards>
-  }
-
-  let statsBudget = MAX_STATS_CALLS
-  for (const fx of fixtures) {
-    const id = fx?.fixture?.id
-    const round = (fx?.league?.round ?? '').toLowerCase()
-    const finishedGroup = mapStatus(fx?.fixture?.status?.short ?? 'NS') === 'finished' && round.includes('group')
-    if (!finishedGroup || typeof id !== 'number' || cardsMap[id] || statsBudget <= 0) continue
-    statsBudget--
-    const cards = await fetchCards(id, key).catch(() => null)
-    if (cards) cardsMap[id] = cards
-  }
-
-  const matches = fixtures.map((fx) => {
-    const round = fx?.league?.round ?? ''
-    const homeGoals = fx?.goals?.home
-    const awayGoals = fx?.goals?.away
-    const id = fx?.fixture?.id
-    return {
-      id: String(id ?? ''),
-      stage: round,
-      isGroupStage: round.toLowerCase().includes('group'),
-      date: fx?.fixture?.date ?? '',
-      home: fx?.teams?.home?.name ?? '',
-      away: fx?.teams?.away?.name ?? '',
-      status: mapStatus(fx?.fixture?.status?.short ?? 'NS'),
-      score:
-        homeGoals === null || homeGoals === undefined
-          ? null
-          : { home: Number(homeGoals), away: Number(awayGoals) },
-      cards: (typeof id === 'number' && cardsMap[id]) || {
-        home: { yellow: 0, red: 0 },
-        away: { yellow: 0, red: 0 },
-      },
-    }
-  })
-
+  const matches = (await fetchSource(env)).map(normalize)
   const payload = { updatedAt: new Date().toISOString(), source: 'api' as const, matches }
-  if (kv) {
-    await kv.put(PAYLOAD_KEY, JSON.stringify(payload))
-    await kv.put(CARDS_KEY, JSON.stringify(cardsMap))
-  }
+  if (env.RESULTS_KV) await env.RESULTS_KV.put(PAYLOAD_KEY, JSON.stringify(payload))
   return payload
 }
 
@@ -175,35 +96,14 @@ interface StoredPayload {
 export const onRequestGet = async (context: Ctx): Promise<Response> => {
   const { env, request } = context
 
-  // Without a key (local dev / preview) return an empty payload so the UI still
-  // renders the static fixtures as "scheduled".
-  if (!env.FOOTBALL_API_KEY) {
-    return json({ updatedAt: nowIso(), source: 'none', matches: [] })
-  }
-
-  // ?debug=1 surfaces exactly what the upstream API returns (errors, result
-  // count, the league/season used) without exposing the key — for diagnosing
-  // empty results.
+  // ?debug=1 surfaces the source URL and how many matches/results it returned.
   if (new URL(request.url).searchParams.get('debug') === '1') {
-    const league = env.FOOTBALL_LEAGUE_ID || '1'
-    const season = env.FOOTBALL_SEASON || '2026'
     try {
-      const data = await apiGet<ApiEnvelope<unknown[]>>(
-        `/fixtures?league=${league}&season=${season}`,
-        env.FOOTBALL_API_KEY,
-      )
-      return json(
-        {
-          league,
-          season,
-          results: data.results ?? (data.response?.length ?? 0),
-          errors: data.errors ?? null,
-          sample: (data.response ?? []).slice(0, 1),
-        },
-        0,
-      )
+      const matches = await fetchSource(env)
+      const played = matches.filter((m) => m.score?.ft).length
+      return json({ url: dataUrl(env), total: matches.length, played, sample: matches.slice(0, 1) }, 0)
     } catch (err) {
-      return json({ league, season, fetchError: String(err) }, 0)
+      return json({ url: dataUrl(env), fetchError: String(err) }, 0)
     }
   }
 
@@ -212,7 +112,7 @@ export const onRequestGet = async (context: Ctx): Promise<Response> => {
   const stored = storedRaw ? (JSON.parse(storedRaw) as StoredPayload) : null
   const fresh = stored ? Date.now() - Date.parse(stored.updatedAt) < REFRESH_MS : false
 
-  if (stored && fresh) return rawJson(storedRaw!, 30)
+  if (stored && fresh) return rawJson(storedRaw!, 60)
   if (stored) {
     // Serve the stale copy immediately; refresh KV in the background.
     context.waitUntil(refresh(env).catch(() => {}))
@@ -221,7 +121,7 @@ export const onRequestGet = async (context: Ctx): Promise<Response> => {
 
   // Cold start (nothing stored yet): fetch synchronously.
   try {
-    return json(await refresh(env), 30)
+    return json(await refresh(env), 60)
   } catch (err) {
     return json({ updatedAt: nowIso(), source: 'none', matches: [], error: String(err) }, 0)
   }

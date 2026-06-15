@@ -36,16 +36,14 @@ export default function StatusBar({ loading, error, source, updatedAt }: Readonl
           : loading
             ? 'Loading results…'
             : liveData
-              ? 'Live results'
+              ? 'Results'
               : 'Awaiting results feed'}
       </span>
       {time && !error && (
         <span className="text-slate-muted">Updated {time}</span>
       )}
       {!liveData && !loading && !error && (
-        <span className="text-slate-muted">
-          (set the football API key to enable live scores)
-        </span>
+        <span className="text-slate-muted">(fixtures shown; results feed not yet available)</span>
       )}
     </div>
   )
