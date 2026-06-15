@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
-import { EMPTY_RESULTS, type MatchResult, type ResultsPayload } from './results'
+import {
+  EMPTY_RESULTS,
+  refreshIntervalMs,
+  type MatchResult,
+  type ResultsPayload,
+} from './results'
 
-const POLL_MS = 60_000
+// When we have no data yet (first load failed, or no fixtures), retry soon rather
+// than waiting out the long idle interval.
+const RETRY_MS = 60_000
 
 function matchKey(home: string, away: string): string {
   return `${home}|${away}`.toLowerCase()
@@ -52,25 +59,31 @@ export function useResults() {
 
   useEffect(() => {
     let active = true
+    let timer: ReturnType<typeof globalThis.setTimeout>
 
     async function tick() {
+      let matches: MatchResult[] = []
       try {
         const payload = await load()
         if (!active) return
         setData(payload)
         setError(null)
+        matches = payload.matches
       } catch (err) {
         if (active) setError(String(err))
       } finally {
         if (active) setLoading(false)
       }
+      if (!active) return
+      // Poll briskly while a score is settling, back off to a trickle otherwise.
+      const next = matches.length ? refreshIntervalMs(matches) : RETRY_MS
+      timer = globalThis.setTimeout(tick, next)
     }
 
     tick()
-    const id = globalThis.setInterval(tick, POLL_MS)
     return () => {
       active = false
-      globalThis.clearInterval(id)
+      globalThis.clearTimeout(timer)
     }
   }, [])
 
