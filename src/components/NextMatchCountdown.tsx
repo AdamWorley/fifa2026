@@ -25,14 +25,11 @@ function formatGap(ms: number): string {
 }
 
 /**
- * Google "watch live" search for a fixture — surfaces the legitimate broadcaster
- * or stream for the viewer's own region (rights are split by country), rather
- * than guessing a single URL we can't derive.
+ * BBC's live broadcast on iPlayer. The exact per-match stream needs BBC's opaque
+ * programme id (not derivable from match data), so we link the BBC One live
+ * channel — where most UK World Cup matches air — as the closest direct option.
  */
-function watchLiveUrl(home: string, away: string): string {
-  const q = `watch ${home} vs ${away} live World Cup 2026`
-  return `https://www.google.com/search?q=${encodeURIComponent(q)}`
-}
+const BBC_LIVE_URL = 'https://www.bbc.co.uk/iplayer/live/bbcone'
 
 function formatKickoff(iso: string): string {
   const d = new Date(iso)
@@ -74,12 +71,12 @@ export default function NextMatchCountdown({ matches }: Readonly<Props>) {
       </span>
       {live ? (
         <a
-          href={watchLiveUrl(match.home, match.away)}
+          href={BBC_LIVE_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="ml-auto inline-flex items-center gap-1 font-bold text-emerald-600 hover:underline"
         >
-          Watch live
+          Watch on BBC iPlayer
           <span aria-hidden>↗</span>
         </a>
       ) : (
