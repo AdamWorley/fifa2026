@@ -1,0 +1,16 @@
+# Always revalidate the HTML routes so a new deploy can't be pinned by a cached
+# page. Listed explicitly (not /*) so build assets below stay purely immutable.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/groups
+  Cache-Control: no-cache
+/knockouts
+  Cache-Control: no-cache
+/awards
+  Cache-Control: no-cache
+
+# Hashed, content-addressed build assets (JS/CSS/flags) — cache forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-mist text-ink font-sans antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-black tracking-tight text-navy;
+  }
+}
+
+@layer components {
+  .nw-container {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+  .nw-card {
+    @apply rounded-2xl bg-white shadow-card ring-1 ring-line/60;
+  }
+  .nw-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold
+      transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .nw-btn-primary {
+    @apply nw-btn bg-navy text-white hover:bg-navy-light;
+  }
+  .nw-btn-accent {
+    @apply nw-btn bg-brand-cyan text-white hover:bg-brand-bright;
+  }
+  .nw-btn-ghost {
+    @apply nw-btn bg-white text-navy ring-1 ring-line hover:bg-mist;
+  }
+}

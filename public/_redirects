@@ -1,0 +1,3 @@
+# SPA fallback: serve the app for client-routed tab paths (/groups, /awards, …).
+# Pages Functions (e.g. /api/*) are matched before this and are unaffected.
+/*    /index.html    200
