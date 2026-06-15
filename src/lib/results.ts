@@ -43,6 +43,19 @@ export const EMPTY_RESULTS: ResultsPayload = {
   matches: [],
 }
 
+/**
+ * Scheduled matches whose kickoff is still in the future, soonest first.
+ * The single source of truth for "what's coming up" — shared so the Sweepstake
+ * banner and the Match breakdown "Next up" list never drift apart. A match stays
+ * `scheduled` until its final score lands (often hours after kickoff), so the
+ * future-kickoff check is what keeps already-started matches out of "upcoming".
+ */
+export function upcomingMatches(matches: MatchResult[], now: number = Date.now()): MatchResult[] {
+  return matches
+    .filter((m) => m.status === 'scheduled' && m.kickoff != null && Date.parse(m.kickoff) > now)
+    .sort((a, b) => Date.parse(a.kickoff!) - Date.parse(b.kickoff!))
+}
+
 // ---- refresh scheduling ----
 
 const MINUTE_MS = 60_000

@@ -2,7 +2,13 @@ import { useMemo, useState } from 'react'
 import { getTeam, STAGE_LABELS, type Stage } from '../data/tournament'
 import { resolveTeamId } from '../lib/aliases'
 import { getParticipant, ownerOf } from '../lib/sweepstake'
-import { formatUtcOffset, type MatchResult, type MatchStatus, type TeamCards } from '../lib/results'
+import {
+  formatUtcOffset,
+  upcomingMatches,
+  type MatchResult,
+  type MatchStatus,
+  type TeamCards,
+} from '../lib/results'
 import type { SweepstakeState } from '../lib/urlState'
 import OwnerPill from './OwnerPill'
 import Flag from './Flag'
@@ -116,14 +122,7 @@ export default function MatchBreakdown({ matches, state, meId }: Readonly<Props>
     return map
   }, [matches, filter])
 
-  const upcoming = useMemo(
-    () =>
-      matches
-        .filter((m) => m.status === 'scheduled')
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(0, 3),
-    [matches],
-  )
+  const upcoming = useMemo(() => upcomingMatches(matches).slice(0, 3), [matches])
 
   const total = matches.length
   const shown = [...byStage.values()].reduce((n, list) => n + list.length, 0)

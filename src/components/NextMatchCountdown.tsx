@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { MatchResult } from '../lib/results'
+import { upcomingMatches, type MatchResult } from '../lib/results'
 
 interface Props {
   matches: MatchResult[]
@@ -8,9 +8,7 @@ interface Props {
 function pickNext(matches: MatchResult[], now: number): { match: MatchResult; live: boolean } | null {
   const live = matches.find((m) => m.status === 'live')
   if (live) return { match: live, live: true }
-  const upcoming = matches
-    .filter((m) => m.status === 'scheduled' && m.kickoff && Date.parse(m.kickoff) > now)
-    .sort((a, b) => Date.parse(a.kickoff!) - Date.parse(b.kickoff!))
+  const upcoming = upcomingMatches(matches, now)
   return upcoming.length ? { match: upcoming[0], live: false } : null
 }
 
