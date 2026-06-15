@@ -59,19 +59,25 @@ The static fixtures/groups/bracket are seeded from the public-domain
 
 ## Deploy to Cloudflare Pages
 
-Deploys run automatically from GitHub via
-`.github/workflows/deploy.yml`: every push to `main` lints, tests, builds, and
-deploys to the `fifa2026-sweepstake` Pages project (Direct Upload).
+The repo is connected to Cloudflare Pages via its native Git integration —
+every push to `main` builds and deploys automatically, with preview deployments
+for other branches/PRs.
 
-**One-time setup** — add two repository secrets in GitHub
-(Settings → Secrets and variables → Actions):
+**This is a Vite project, not Next.js.** In the Pages project's
+**Settings → Builds & deployments → Build configuration**, set:
 
-| Secret | Value |
+| Field | Value |
 | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | A Cloudflare API token with the **Cloudflare Pages: Edit** permission |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account id |
+| Framework preset | **Vite** (or None) |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
 
-Then add the football API key as a Cloudflare secret (server-side, never in git):
+`wrangler.toml` supplies the rest (output dir, `[vars]`, and the `RESULTS_KV`
+binding) to the build. Confirm the KV binding shows under
+**Settings → Functions → KV namespace bindings**.
+
+Then add the football API key as a secret (server-side, never in git) under
+**Settings → Environment variables** (or via the CLI):
 
 ```bash
 npx wrangler pages secret put FOOTBALL_API_KEY
