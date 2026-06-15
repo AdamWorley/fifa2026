@@ -4,6 +4,7 @@ import AssignmentEditor from './components/AssignmentEditor'
 import GroupsBoard from './components/GroupsBoard'
 import AwardsBoard from './components/AwardsBoard'
 import KnockoutBracket from './components/KnockoutBracket'
+import MatchBreakdown from './components/MatchBreakdown'
 import Leaderboard from './components/Leaderboard'
 import StatusBar from './components/StatusBar'
 import { useSweepstake } from './lib/useSweepstake'
@@ -67,6 +68,7 @@ function App() {
         />
       )}
       {tab === 'knockouts' && <KnockoutBracket matches={data.matches} state={state} />}
+      {tab === 'matches' && <MatchBreakdown matches={data.matches} state={state} />}
       {tab === 'awards' && <AwardsBoard prizeStandings={data.prizeStandings} state={state} />}
     </Layout>
   )
