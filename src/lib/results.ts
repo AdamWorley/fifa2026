@@ -43,6 +43,19 @@ export const EMPTY_RESULTS: ResultsPayload = {
   matches: [],
 }
 
+/**
+ * Scheduled matches whose kickoff is still in the future, soonest first.
+ * The single source of truth for "what's coming up" — shared so the Sweepstake
+ * banner and the Match breakdown "Next up" list never drift apart. A match stays
+ * `scheduled` until its final score lands (often hours after kickoff), so the
+ * future-kickoff check is what keeps already-started matches out of "upcoming".
+ */
+export function upcomingMatches(matches: MatchResult[], now: number = Date.now()): MatchResult[] {
+  return matches
+    .filter((m) => m.status === 'scheduled' && m.kickoff != null && Date.parse(m.kickoff) > now)
+    .sort((a, b) => Date.parse(a.kickoff!) - Date.parse(b.kickoff!))
+}
+
 // ---- refresh scheduling ----
 
 const MINUTE_MS = 60_000
@@ -55,6 +68,24 @@ const MATCH_DURATION_MS = 2.5 * HOUR_MS
  * checking until the final score lands — up to this long past the final whistle.
  */
 const SETTLE_WINDOW_MS = 5 * HOUR_MS
+
+/**
+ * The state a fixture is actually in, derived on the client from kickoff vs now.
+ * The upstream feed only ever reports `scheduled` or `finished`, so a match that
+ * has kicked off and one that's over-but-unscored both arrive as `scheduled`;
+ * this splits them into `now` (in play) and `finalising` (awaiting the result).
+ */
+export type MatchPhase = 'upcoming' | 'now' | 'finalising' | 'finished'
+
+export function matchPhase(m: MatchResult, now: number = Date.now()): MatchPhase {
+  if (m.status === 'finished' || m.score) return 'finished'
+  if (m.status === 'live') return 'now'
+  if (!m.kickoff) return 'upcoming'
+  const start = Date.parse(m.kickoff)
+  if (Number.isNaN(start) || now < start) return 'upcoming'
+  // Kicked off but no score yet: in play until the final whistle, then awaiting result.
+  return now < start + MATCH_DURATION_MS ? 'now' : 'finalising'
+}
 
 /** Cadence while a match's score is still expected to land. */
 export const ACTIVE_REFRESH_MS = 15 * MINUTE_MS

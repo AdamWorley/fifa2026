@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react'
-import type { MatchResult } from '../lib/results'
+import { matchPhase, upcomingMatches, type MatchResult } from '../lib/results'
 
 interface Props {
   matches: MatchResult[]
 }
 
 function pickNext(matches: MatchResult[], now: number): { match: MatchResult; live: boolean } | null {
-  const live = matches.find((m) => m.status === 'live')
+  // A match in play wins; the feed never sends 'live', so derive it from kickoff vs now.
+  const live = matches.find((m) => matchPhase(m, now) === 'now')
   if (live) return { match: live, live: true }
-  const upcoming = matches
-    .filter((m) => m.status === 'scheduled' && m.kickoff && Date.parse(m.kickoff) > now)
-    .sort((a, b) => Date.parse(a.kickoff!) - Date.parse(b.kickoff!))
+  const upcoming = upcomingMatches(matches, now)
   return upcoming.length ? { match: upcoming[0], live: false } : null
 }
 
@@ -24,6 +23,13 @@ function formatGap(ms: number): string {
   if (hours > 0) return `${hours}h ${mins}m`
   return `${mins}m`
 }
+
+/**
+ * BBC's live broadcast on iPlayer. The exact per-match stream needs BBC's opaque
+ * programme id (not derivable from match data), so we link the BBC One live
+ * channel — where most UK World Cup matches air — as the closest direct option.
+ */
+const BBC_LIVE_URL = 'https://www.bbc.co.uk/iplayer/live/bbcone'
 
 function formatKickoff(iso: string): string {
   const d = new Date(iso)
@@ -63,11 +69,23 @@ export default function NextMatchCountdown({ matches }: Readonly<Props>) {
       <span className="font-bold text-navy">
         {match.home} <span className="text-slate-muted">v</span> {match.away}
       </span>
-      {!live && match.kickoff && (
-        <span className="ml-auto text-slate-muted">
-          {formatKickoff(match.kickoff)} ·{' '}
-          <span className="font-bold text-navy">in {formatGap(Date.parse(match.kickoff) - now)}</span>
-        </span>
+      {live ? (
+        <a
+          href={BBC_LIVE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto inline-flex items-center gap-1 font-bold text-emerald-600 hover:underline"
+        >
+          Watch on BBC iPlayer
+          <span aria-hidden>↗</span>
+        </a>
+      ) : (
+        match.kickoff && (
+          <span className="ml-auto text-slate-muted">
+            {formatKickoff(match.kickoff)} ·{' '}
+            <span className="font-bold text-navy">in {formatGap(Date.parse(match.kickoff) - now)}</span>
+          </span>
+        )
       )}
     </div>
   )
