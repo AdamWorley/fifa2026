@@ -42,16 +42,21 @@ fetches it, normalizes it, and stores it in the `RESULTS_KV` namespace; that
 stored copy is served instantly and refreshed in the background (~10 min) so no
 visitor request ever blocks on the upstream. No API key required.
 
-openfootball provides scores and goals (driving the standings, **Golden Boot**
-and **Wooden Spoon**) but **not card data**. For the **Referee's Favourite**
-award, add card counts to `public/overrides.json` — entries are matched by
-`home`/`away` team name and merged over the feed client-side (edit the file and
-redeploy; no code change). Overrides can also correct any wrong score.
+openfootball drives scores and goals (standings, **Golden Boot**, **Wooden
+Spoon**) but has **no card data**. Cards (for **Referee's Favourite**) are
+filled **best-effort from the Wikipedia group articles** via the MediaWiki API:
+the function parses each played match's lineup templates (`{{yel}}`, `{{sent
+off}}`) to count yellows/reds per team. This is approximate — it depends on
+editors having filled in lineups — so it can be **overridden by hand** in
+`public/overrides.json` (entries matched by `home`/`away` team name; the
+override's `cards` replaces the parsed value and always wins). Overrides can
+also correct any wrong score.
 
-> Note: openfootball is community-maintained and updates roughly daily, so it is
-> not strictly live. To go fully live (and get card data automatically) you'd
-> need a paid feed such as [API-FOOTBALL](https://www.api-sports.io/) — the free
-> tier there does not include the 2026 season.
+> Note: both sources are community-maintained and update roughly daily, not
+> strictly live. For fully-live, authoritative cards you'd need a paid feed
+> (e.g. [API-FOOTBALL](https://www.api-sports.io/) or football-data.org's
+> deep-data add-on) — the free tiers don't cover 2026 cards. See
+> `?debug=1` on `/api/results` for a parse summary.
 
 The static fixtures/groups/bracket are also seeded from openfootball
 (`src/data/*.source.json`); the live feed overlays scores on top.

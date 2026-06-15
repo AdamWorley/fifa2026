@@ -1,4 +1,4 @@
 {
-  "_comment": "Manual corrections for matches the live API gets wrong or is missing (e.g. card counts). Each entry overrides the matching match by home+away team name. Leave matches empty to rely entirely on the API.",
+  "_comment": "Manual corrections, merged over the feed by home+away team name (override wins). Use to fix a wrong score or to set card counts the Wikipedia parse missed. Example entry: {\"home\":\"England\",\"away\":\"Croatia\",\"cards\":{\"home\":{\"yellow\":2,\"red\":0},\"away\":{\"yellow\":3,\"red\":1}}}. Use team names exactly as shown in the app. Leave matches empty to rely entirely on the feed.",
   "matches": []
 }
