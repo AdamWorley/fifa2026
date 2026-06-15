@@ -62,6 +62,22 @@ function formatVenue(kickoff: string, offsetMinutes: number, venue: string): str
   return `${time} (${where}${formatUtcOffset(offsetMinutes)})`
 }
 
+/**
+ * Google match-card search for a fixture — lands on Google's rich panel (score,
+ * timeline, lineups, stats) when both teams are known. Returns null for knockout
+ * slots whose sides are still placeholders (e.g. "Winner Group A", "2B").
+ */
+function googleMatchUrl(home: string, away: string): string | null {
+  if (!home || !away || isPlaceholder(home) || isPlaceholder(away)) return null
+  const q = `${home} vs ${away} World Cup 2026`
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}`
+}
+
+/** Knockout placeholders carry no real team name (e.g. "Winner Group A", "2B", "W74"). */
+function isPlaceholder(name: string): boolean {
+  return /\b(winner|runner|loser|group|w\d|rw\d|\d[a-l])\b/i.test(name)
+}
+
 /** Fallback for matches with no kickoff time — show the date without a zone shift. */
 function formatDateOnly(date: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
@@ -201,6 +217,7 @@ function MatchCard({
     match.kickoff != null && match.venueOffsetMinutes != null
       ? `Venue time: ${formatVenue(match.kickoff, match.venueOffsetMinutes, match.venue ?? '')}`
       : undefined
+  const statsUrl = googleMatchUrl(match.home, match.away)
 
   return (
     <div className="nw-card p-3 text-sm">
@@ -229,6 +246,17 @@ function MatchCard({
         state={state}
         meId={meId}
       />
+      {statsUrl && (
+        <a
+          href={statsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-navy hover:underline"
+        >
+          Match stats &amp; lineups
+          <span aria-hidden>↗</span>
+        </a>
+      )}
     </div>
   )
 }
