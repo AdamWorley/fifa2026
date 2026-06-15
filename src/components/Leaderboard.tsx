@@ -11,14 +11,20 @@ export default function Leaderboard({ leaderboard }: Readonly<Props>) {
   if (leaderboard.length === 0) {
     return (
       <div className="nw-card p-6 text-sm text-slate-muted">
-        Add participants and assign teams above to build the leaderboard.
+        You're a good soldier, choosing your battles — add participants and assign teams
+        above to build the leaderboard. 🎶
       </div>
     )
   }
 
   return (
     <div className="space-y-3">
-      <h2 className="text-xl">Leaderboard</h2>
+      <div>
+        <h2 className="text-xl">Leaderboard</h2>
+        <p className="text-xs font-semibold italic text-slate-muted">
+          When you fall get up, oh oh — and if you fall get up, eh eh. 🎶
+        </p>
+      </div>
       {leaderboard.map((entry, position) => (
         <div key={entry.index} className="nw-card p-4">
           <div className="flex flex-wrap items-center gap-3">
