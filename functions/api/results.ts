@@ -24,6 +24,30 @@ interface KVNamespace {
 interface Env {
   WC_DATA_URL?: string
   RESULTS_KV?: KVNamespace
+  // Optional: a football-data.org token to probe whether WC cards (bookings)
+  // are available on the free tier. Set as a Cloudflare secret.
+  FOOTBALL_DATA_TOKEN?: string
+}
+
+const FD_BASE = 'https://api.football-data.org/v4'
+
+interface FdMatch {
+  id?: number
+  status?: string
+  homeTeam?: { name?: string }
+  awayTeam?: { name?: string }
+}
+interface FdBody {
+  matches?: FdMatch[]
+  filters?: unknown
+  message?: string
+  bookings?: unknown[]
+}
+
+async function fdGet(path: string, token: string): Promise<{ status: number; body: FdBody | null }> {
+  const res = await fetch(`${FD_BASE}${path}`, { headers: { 'X-Auth-Token': token } })
+  const body = (await res.json().catch(() => null)) as FdBody | null
+  return { status: res.status, body }
 }
 
 interface Ctx {
@@ -96,8 +120,49 @@ interface StoredPayload {
 export const onRequestGet = async (context: Ctx): Promise<Response> => {
   const { env, request } = context
 
+  const params = new URL(request.url).searchParams
+
+  // ?cardsdebug=1 probes whether football-data.org returns WC match bookings
+  // (cards) on the current token's tier — to decide if cards can be free.
+  if (params.get('cardsdebug') === '1') {
+    const token = env.FOOTBALL_DATA_TOKEN
+    if (!token) return json({ error: 'Set the FOOTBALL_DATA_TOKEN secret first' }, 0)
+    try {
+      const list = await fdGet('/competitions/WC/matches', token)
+      const matches = list.body?.matches ?? []
+      const finished = matches.filter((m) => m.status === 'FINISHED')
+      let detailStatus: number | null = null
+      let detailMessage: string | undefined
+      let bookings: unknown[] | 'absent' = 'absent'
+      if (finished[0]?.id) {
+        const d = await fdGet(`/matches/${finished[0].id}`, token)
+        detailStatus = d.status
+        detailMessage = d.body?.message
+        bookings = Array.isArray(d.body?.bookings) ? d.body!.bookings! : 'absent'
+      }
+      return json(
+        {
+          listStatus: list.status,
+          listMessage: list.body?.message,
+          filters: list.body?.filters ?? null,
+          totalMatches: matches.length,
+          finishedMatches: finished.length,
+          sampleMatchId: finished[0]?.id ?? null,
+          detailStatus,
+          detailMessage,
+          bookingsAvailable: Array.isArray(bookings),
+          bookingsCount: Array.isArray(bookings) ? bookings.length : 0,
+          bookingsSample: Array.isArray(bookings) ? bookings.slice(0, 3) : null,
+        },
+        0,
+      )
+    } catch (err) {
+      return json({ cardsDebugError: String(err) }, 0)
+    }
+  }
+
   // ?debug=1 surfaces the source URL and how many matches/results it returned.
-  if (new URL(request.url).searchParams.get('debug') === '1') {
+  if (params.get('debug') === '1') {
     try {
       const matches = await fetchSource(env)
       const played = matches.filter((m) => m.score?.ft).length
