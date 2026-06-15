@@ -43,6 +43,45 @@ export const EMPTY_RESULTS: ResultsPayload = {
   matches: [],
 }
 
+// ---- refresh scheduling ----
+
+const MINUTE_MS = 60_000
+const HOUR_MS = 60 * MINUTE_MS
+
+/** Kickoff to final whistle: 90' + half-time + stoppage, with room for ET + penalties. */
+const MATCH_DURATION_MS = 2.5 * HOUR_MS
+/**
+ * openfootball is updated by hand, often a few hours after full time, so we keep
+ * checking until the final score lands — up to this long past the final whistle.
+ */
+const SETTLE_WINDOW_MS = 5 * HOUR_MS
+
+/** Cadence while a match's score is still expected to land. */
+export const ACTIVE_REFRESH_MS = 15 * MINUTE_MS
+/** Cadence when nothing is in play — just enough to keep the cache from going cold. */
+export const IDLE_REFRESH_MS = 6 * HOUR_MS
+
+/**
+ * A match we should still be actively polling for: it has kicked off, we don't yet
+ * have a final score, and we're inside the window where the score is expected to
+ * land. Once finished (or past the window) it no longer drives fast polling.
+ */
+function isSettling(m: MatchResult, now: number): boolean {
+  if (m.status === 'finished' || !m.kickoff) return false
+  const start = Date.parse(m.kickoff)
+  if (Number.isNaN(start)) return false
+  return now >= start && now <= start + MATCH_DURATION_MS + SETTLE_WINDOW_MS
+}
+
+/**
+ * How long a cached results payload should be treated as fresh, given the schedule:
+ * short while any match's score is still settling, long otherwise. Lets both the
+ * server refresh and the client poll back off to a trickle when nothing is in play.
+ */
+export function refreshIntervalMs(matches: MatchResult[], now: number = Date.now()): number {
+  return matches.some((m) => isSettling(m, now)) ? ACTIVE_REFRESH_MS : IDLE_REFRESH_MS
+}
+
 // ---- kickoff time handling ----
 
 export interface Kickoff {

@@ -15,7 +15,7 @@
  * Returns ResultsPayload (see src/lib/results.ts) — kept in sync by hand.
  */
 
-import { parseKickoff } from '../../src/lib/results'
+import { parseKickoff, refreshIntervalMs, type MatchResult } from '../../src/lib/results'
 
 interface KVNamespace {
   get(key: string): Promise<string | null>
@@ -39,7 +39,6 @@ const WIKI_API = 'https://en.wikipedia.org/w/api.php'
 const WIKI_UA = 'fifa2026-sweepstake (https://github.com/AdamWorley/fifa2026)'
 const GROUP_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
 
-const REFRESH_MS = 10 * 60_000
 const PAYLOAD_KEY = 'results:payload'
 
 interface SourceMatch {
@@ -213,6 +212,7 @@ async function refresh(env: Env): Promise<unknown> {
 
 interface StoredPayload {
   updatedAt: string
+  matches?: MatchResult[]
 }
 
 export const onRequestGet = async (context: Ctx): Promise<Response> => {
@@ -249,7 +249,10 @@ export const onRequestGet = async (context: Ctx): Promise<Response> => {
   const kv = env.RESULTS_KV
   const storedRaw = kv ? await kv.get(PAYLOAD_KEY) : null
   const stored = storedRaw ? (JSON.parse(storedRaw) as StoredPayload) : null
-  const fresh = stored ? Date.now() - Date.parse(stored.updatedAt) < REFRESH_MS : false
+  // Stay fresh longer when no match is settling, so we don't re-scrape the upstream
+  // sources round the clock; refresh briskly only while a score is expected to land.
+  const interval = stored ? refreshIntervalMs(stored.matches ?? []) : 0
+  const fresh = stored ? Date.now() - Date.parse(stored.updatedAt) < interval : false
 
   if (stored && fresh) return rawJson(storedRaw!, 60)
   if (stored) {
