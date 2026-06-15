@@ -11,8 +11,8 @@ export default function Leaderboard({ leaderboard }: Readonly<Props>) {
   if (leaderboard.length === 0) {
     return (
       <div className="nw-card p-6 text-sm text-slate-muted">
-        You're a good soldier, choosing your battles — add participants and assign teams
-        above to build the leaderboard. 🎶
+        Today's your day — add participants and assign teams above to build the
+        leaderboard. 🎶
       </div>
     )
   }
