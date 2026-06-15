@@ -24,6 +24,16 @@ function formatGap(ms: number): string {
   return `${mins}m`
 }
 
+/**
+ * Google "watch live" search for a fixture — surfaces the legitimate broadcaster
+ * or stream for the viewer's own region (rights are split by country), rather
+ * than guessing a single URL we can't derive.
+ */
+function watchLiveUrl(home: string, away: string): string {
+  const q = `watch ${home} vs ${away} live World Cup 2026`
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}`
+}
+
 function formatKickoff(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
@@ -62,11 +72,23 @@ export default function NextMatchCountdown({ matches }: Readonly<Props>) {
       <span className="font-bold text-navy">
         {match.home} <span className="text-slate-muted">v</span> {match.away}
       </span>
-      {!live && match.kickoff && (
-        <span className="ml-auto text-slate-muted">
-          {formatKickoff(match.kickoff)} ·{' '}
-          <span className="font-bold text-navy">in {formatGap(Date.parse(match.kickoff) - now)}</span>
-        </span>
+      {live ? (
+        <a
+          href={watchLiveUrl(match.home, match.away)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto inline-flex items-center gap-1 font-bold text-emerald-600 hover:underline"
+        >
+          Watch live
+          <span aria-hidden>↗</span>
+        </a>
+      ) : (
+        match.kickoff && (
+          <span className="ml-auto text-slate-muted">
+            {formatKickoff(match.kickoff)} ·{' '}
+            <span className="font-bold text-navy">in {formatGap(Date.parse(match.kickoff) - now)}</span>
+          </span>
+        )
       )}
     </div>
   )
