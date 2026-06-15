@@ -15,6 +15,8 @@
  * Returns ResultsPayload (see src/lib/results.ts) — kept in sync by hand.
  */
 
+import { parseKickoff } from '../../src/lib/results'
+
 interface KVNamespace {
   get(key: string): Promise<string | null>
   put(key: string, value: string): Promise<void>
@@ -44,6 +46,8 @@ interface SourceMatch {
   round?: string
   num?: number
   date?: string
+  time?: string
+  ground?: string
   team1?: string
   team2?: string
   group?: string
@@ -182,11 +186,15 @@ function normalize(m: SourceMatch, wiki: Map<string, { home: Cards; away: Cards 
   const ft = m.score?.ft
   const round = m.round ?? ''
   const isGroupStage = Boolean(m.group) || round.startsWith('Matchday')
+  const kickoff = parseKickoff(m.date ?? '', m.time)
   return {
     id: String(m.num ?? `${m.date ?? ''}-${m.team1 ?? ''}-${m.team2 ?? ''}`),
     stage: round,
     isGroupStage,
     date: m.date ?? '',
+    kickoff: kickoff?.utc ?? null,
+    venue: m.ground ?? '',
+    venueOffsetMinutes: kickoff?.offsetMinutes ?? null,
     home: m.team1 ?? '',
     away: m.team2 ?? '',
     status: ft ? ('finished' as const) : ('scheduled' as const),
