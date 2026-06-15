@@ -1,9 +1,10 @@
-export type Tab = 'sweepstake' | 'groups' | 'knockouts' | 'awards'
+export type Tab = 'sweepstake' | 'groups' | 'knockouts' | 'matches' | 'awards'
 
 export const TABS: { id: Tab; label: string; path: string }[] = [
   { id: 'sweepstake', label: 'Sweepstake', path: '/' },
   { id: 'groups', label: 'Groups', path: '/groups' },
   { id: 'knockouts', label: 'Knockouts', path: '/knockouts' },
+  { id: 'matches', label: 'Match breakdown', path: '/matches' },
   { id: 'awards', label: 'Awards & prizes', path: '/awards' },
 ]
 
