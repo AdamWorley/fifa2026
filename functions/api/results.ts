@@ -65,6 +65,10 @@ function mapStatus(short: string): Status {
 // Minimal shapes for the fields we read from API-FOOTBALL responses.
 interface ApiEnvelope<T> {
   response?: T
+  // API-FOOTBALL returns HTTP 200 even for plan/auth problems, with details here.
+  results?: number
+  errors?: unknown
+  paging?: unknown
 }
 interface StatItem {
   type?: string
@@ -169,12 +173,38 @@ interface StoredPayload {
 }
 
 export const onRequestGet = async (context: Ctx): Promise<Response> => {
-  const { env } = context
+  const { env, request } = context
 
   // Without a key (local dev / preview) return an empty payload so the UI still
   // renders the static fixtures as "scheduled".
   if (!env.FOOTBALL_API_KEY) {
     return json({ updatedAt: nowIso(), source: 'none', matches: [] })
+  }
+
+  // ?debug=1 surfaces exactly what the upstream API returns (errors, result
+  // count, the league/season used) without exposing the key — for diagnosing
+  // empty results.
+  if (new URL(request.url).searchParams.get('debug') === '1') {
+    const league = env.FOOTBALL_LEAGUE_ID || '1'
+    const season = env.FOOTBALL_SEASON || '2026'
+    try {
+      const data = await apiGet<ApiEnvelope<unknown[]>>(
+        `/fixtures?league=${league}&season=${season}`,
+        env.FOOTBALL_API_KEY,
+      )
+      return json(
+        {
+          league,
+          season,
+          results: data.results ?? (data.response?.length ?? 0),
+          errors: data.errors ?? null,
+          sample: (data.response ?? []).slice(0, 1),
+        },
+        0,
+      )
+    } catch (err) {
+      return json({ league, season, fetchError: String(err) }, 0)
+    }
   }
 
   const kv = env.RESULTS_KV
