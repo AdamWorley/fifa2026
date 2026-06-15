@@ -69,6 +69,24 @@ const MATCH_DURATION_MS = 2.5 * HOUR_MS
  */
 const SETTLE_WINDOW_MS = 5 * HOUR_MS
 
+/**
+ * The state a fixture is actually in, derived on the client from kickoff vs now.
+ * The upstream feed only ever reports `scheduled` or `finished`, so a match that
+ * has kicked off and one that's over-but-unscored both arrive as `scheduled`;
+ * this splits them into `now` (in play) and `finalising` (awaiting the result).
+ */
+export type MatchPhase = 'upcoming' | 'now' | 'finalising' | 'finished'
+
+export function matchPhase(m: MatchResult, now: number = Date.now()): MatchPhase {
+  if (m.status === 'finished' || m.score) return 'finished'
+  if (m.status === 'live') return 'now'
+  if (!m.kickoff) return 'upcoming'
+  const start = Date.parse(m.kickoff)
+  if (Number.isNaN(start) || now < start) return 'upcoming'
+  // Kicked off but no score yet: in play until the final whistle, then awaiting result.
+  return now < start + MATCH_DURATION_MS ? 'now' : 'finalising'
+}
+
 /** Cadence while a match's score is still expected to land. */
 export const ACTIVE_REFRESH_MS = 15 * MINUTE_MS
 /** Cadence when nothing is in play — just enough to keep the cache from going cold. */

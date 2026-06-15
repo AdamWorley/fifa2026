@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getTeam, STAGE_LABELS, type Stage } from '../data/tournament'
 import { resolveTeamId } from '../lib/aliases'
 import { getParticipant, ownerOf } from '../lib/sweepstake'
 import {
   formatUtcOffset,
+  matchPhase,
   upcomingMatches,
+  type MatchPhase,
   type MatchResult,
-  type MatchStatus,
   type TeamCards,
 } from '../lib/results'
 import type { SweepstakeState } from '../lib/urlState'
@@ -97,30 +98,37 @@ function formatDateOnly(date: string): string {
   })
 }
 
-type Filter = 'all' | MatchStatus
+type Filter = 'all' | MatchPhase
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
-  { id: 'live', label: 'Live' },
+  { id: 'now', label: 'Now' },
+  { id: 'finalising', label: 'Finalising' },
+  { id: 'upcoming', label: 'Upcoming' },
   { id: 'finished', label: 'Finished' },
-  { id: 'scheduled', label: 'Upcoming' },
 ]
 
 export default function MatchBreakdown({ matches, state, meId }: Readonly<Props>) {
   const [filter, setFilter] = useState<Filter>('all')
+  // Tick so the time-derived phase (Now / Finalising) stays current on a long-open tab.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = globalThis.setInterval(() => setNow(Date.now()), 30_000)
+    return () => globalThis.clearInterval(timer)
+  }, [])
 
   const byStage = useMemo(() => {
     const map = new Map<Stage, MatchResult[]>()
     for (const stage of STAGE_ORDER) map.set(stage, [])
     for (const m of matches) {
-      if (filter !== 'all' && m.status !== filter) continue
+      if (filter !== 'all' && matchPhase(m, now) !== filter) continue
       map.get(stageKey(m.stage))!.push(m)
     }
     for (const list of map.values()) {
       list.sort((a, b) => a.date.localeCompare(b.date))
     }
     return map
-  }, [matches, filter])
+  }, [matches, filter, now])
 
   const upcoming = useMemo(() => upcomingMatches(matches).slice(0, 3), [matches])
 
@@ -141,7 +149,7 @@ export default function MatchBreakdown({ matches, state, meId }: Readonly<Props>
           </h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {upcoming.map((m) => (
-              <MatchCard key={m.id} match={m} state={state} meId={meId} />
+              <MatchCard key={m.id} match={m} state={state} meId={meId} now={now} />
             ))}
           </div>
         </section>
@@ -180,7 +188,7 @@ export default function MatchBreakdown({ matches, state, meId }: Readonly<Props>
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {rows.map((m) => (
-                    <MatchCard key={m.id} match={m} state={state} meId={meId} />
+                    <MatchCard key={m.id} match={m} state={state} meId={meId} now={now} />
                   ))}
                 </div>
               </section>
@@ -192,23 +200,26 @@ export default function MatchBreakdown({ matches, state, meId }: Readonly<Props>
   )
 }
 
-const STATUS_BADGE: Record<MatchStatus, string> = {
-  live: 'bg-emerald-500 text-white',
+const PHASE_BADGE: Record<MatchPhase, string> = {
+  now: 'bg-emerald-500 text-white',
+  finalising: 'bg-amber-100 text-amber-700',
   finished: 'bg-slate-200 text-slate-700',
-  scheduled: 'bg-mist text-slate-muted',
+  upcoming: 'bg-mist text-slate-muted',
 }
 
-const STATUS_LABEL: Record<MatchStatus, string> = {
-  live: 'Live',
+const PHASE_LABEL: Record<MatchPhase, string> = {
+  now: 'Now',
+  finalising: 'Finalising',
   finished: 'Full time',
-  scheduled: 'Upcoming',
+  upcoming: 'Upcoming',
 }
 
 function MatchCard({
   match,
   state,
   meId,
-}: Readonly<{ match: MatchResult; state: SweepstakeState; meId?: string | null }>) {
+  now,
+}: Readonly<{ match: MatchResult; state: SweepstakeState; meId?: string | null; now: number }>) {
   const homeWon = match.score ? match.score.home > match.score.away : false
   const awayWon = match.score ? match.score.away > match.score.home : false
   const date = match.kickoff ? formatLocal(match.kickoff) : formatDateOnly(match.date)
@@ -217,6 +228,7 @@ function MatchCard({
       ? `Venue time: ${formatVenue(match.kickoff, match.venueOffsetMinutes, match.venue ?? '')}`
       : undefined
   const statsUrl = googleMatchUrl(match.home, match.away)
+  const phase = matchPhase(match, now)
 
   return (
     <div className="nw-card p-3 text-sm">
@@ -224,8 +236,9 @@ function MatchCard({
         <span className="truncate text-slate-muted" title={venueTime}>
           {date}
         </span>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 font-bold ${STATUS_BADGE[match.status]}`}>
-          {STATUS_LABEL[match.status]}
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-bold ${PHASE_BADGE[phase]}`}>
+          {phase === 'now' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />}
+          {PHASE_LABEL[phase]}
         </span>
       </div>
       <Side
