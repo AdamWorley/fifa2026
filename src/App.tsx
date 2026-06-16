@@ -7,8 +7,11 @@ import KnockoutBracket from './components/KnockoutBracket'
 import MatchBreakdown from './components/MatchBreakdown'
 import NextMatchCountdown from './components/NextMatchCountdown'
 import Leaderboard from './components/Leaderboard'
+import ParticipantsPanel from './components/ParticipantsPanel'
+import ShareCard from './components/ShareCard'
 import StatusBar from './components/StatusBar'
 import ViewerSelect from './components/ViewerSelect'
+import { setLocked } from './lib/sweepstake'
 import { useSweepstake } from './lib/useSweepstake'
 import { useViewer } from './lib/useViewer'
 import { useTournamentData } from './lib/useTournamentData'
@@ -33,6 +36,11 @@ function App() {
   }
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  function handleUnlock() {
+    const ok = globalThis.confirm('Unlock the draw? You will be able to edit participants and team assignments again.')
+    if (ok) setState((prev) => setLocked(prev, false))
+  }
 
   function onTabKeyDown(e: React.KeyboardEvent, i: number) {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
@@ -85,13 +93,33 @@ function App() {
       </nav>
 
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === 'sweepstake' && (
-          <div className="space-y-8">
-            <NextMatchCountdown matches={data.matches} />
-            <AssignmentEditor state={state} setState={setState} />
-            <Leaderboard leaderboard={data.leaderboard} meId={meId} />
-          </div>
-        )}
+        {tab === 'sweepstake' &&
+          (state.locked ? (
+            <div className="space-y-8">
+              <NextMatchCountdown matches={data.matches} />
+              <Leaderboard leaderboard={data.leaderboard} meId={meId} />
+              <ParticipantsPanel state={state} meId={meId} />
+              <ShareCard state={state} />
+              <div className="flex items-center gap-3 text-sm text-slate-muted">
+                <span className="inline-flex items-center gap-1.5 font-semibold text-navy">
+                  🔒 Draw locked
+                </span>
+                <button
+                  type="button"
+                  onClick={handleUnlock}
+                  className="nw-btn bg-white px-3 py-1.5 text-xs text-navy ring-1 ring-line hover:bg-mist"
+                >
+                  Unlock to edit
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <NextMatchCountdown matches={data.matches} />
+              <AssignmentEditor state={state} setState={setState} />
+              <Leaderboard leaderboard={data.leaderboard} meId={meId} />
+            </div>
+          ))}
         {tab === 'groups' && (
           <GroupsBoard
             standings={data.standings}

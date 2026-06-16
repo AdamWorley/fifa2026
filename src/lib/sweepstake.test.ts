@@ -7,6 +7,7 @@ import {
   randomDraw,
   removeParticipant,
   setAssignment,
+  setLocked,
   teamsByParticipant,
 } from './sweepstake'
 
@@ -27,6 +28,13 @@ describe('url state round-trip', () => {
   it('returns empty state for null/garbage', () => {
     expect(decodeState(null)).toEqual(EMPTY_STATE)
     expect(decodeState('not-valid-lzstring!!')).toEqual(EMPTY_STATE)
+  })
+
+  it('round-trips the locked flag, omitting it when unset', () => {
+    const locked = setLocked(sample, true)
+    expect(decodeState(encodeState(locked)).locked).toBe(true)
+    // Unlocked draws carry no locked key so legacy links stay unaffected.
+    expect(decodeState(encodeState(sample)).locked).toBeUndefined()
   })
 
   it('drops assignments pointing at non-existent participants', () => {
@@ -79,6 +87,15 @@ describe('assignment helpers', () => {
     expect(added.participants.map((p) => p.name)).toContain('Carol')
     expect(added.participants.at(-1)?.id).toBeTruthy()
     expect(addParticipant(sample, '   ')).toBe(sample)
+  })
+})
+
+describe('lock', () => {
+  it('sets and clears the locked flag immutably', () => {
+    const locked = setLocked(sample, true)
+    expect(locked.locked).toBe(true)
+    expect(sample.locked).toBeUndefined()
+    expect(setLocked(locked, false).locked).toBe(false)
   })
 })
 

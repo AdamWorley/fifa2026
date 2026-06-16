@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { GROUPS, getTeam } from '../data/tournament'
-import { buildShareUrl, type SweepstakeState } from '../lib/urlState'
+import type { SweepstakeState } from '../lib/urlState'
 import {
   addParticipant,
   clearAssignments,
@@ -8,9 +8,11 @@ import {
   removeParticipant,
   renameParticipant,
   setAssignment,
+  setLocked,
 } from '../lib/sweepstake'
 import { participantColor } from '../lib/colors'
 import Flag from './Flag'
+import ShareCard from './ShareCard'
 
 interface Props {
   state: SweepstakeState
@@ -21,7 +23,6 @@ const TOTAL_TEAMS = GROUPS.reduce((sum, g) => sum + g.teamIds.length, 0)
 
 export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
   const [newName, setNewName] = useState('')
-  const [copied, setCopied] = useState(false)
 
   const assignedCount = Object.keys(state.assignments).length
   const allAssigned = assignedCount >= TOTAL_TEAMS
@@ -38,23 +39,21 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
     setNewName('')
   }
 
-  const shareUrl = buildShareUrl(state)
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      setCopied(true)
-      globalThis.setTimeout(() => setCopied(false), 2000)
-    } catch {
-      globalThis.prompt('Copy this shareable link:', shareUrl)
-    }
-  }
-
   function handleReset() {
     if (assignedCount === 0) return
     const ok = globalThis.confirm('Clear all team assignments? Participants are kept.')
     if (ok) setState((prev) => clearAssignments(prev))
   }
+
+  function handleLock() {
+    const message = allAssigned
+      ? 'Lock the draw? Participants and team assignments can no longer be edited (you can unlock later).'
+      : `Only ${assignedCount}/${TOTAL_TEAMS} teams are assigned. Lock the draw anyway? ` +
+        'Participants and team assignments can no longer be edited (you can unlock later).'
+    if (globalThis.confirm(message)) setState((prev) => setLocked(prev, true))
+  }
+
+  const canLock = state.participants.length > 0 && assignedCount > 0
 
   return (
     <div className="space-y-6">
@@ -172,28 +171,32 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
         </div>
       </CollapsibleCard>
 
-      {/* Share */}
+      {/* Lock the draw */}
       <section className="nw-card space-y-3 p-6">
         <div>
-          <h2 className="text-xl">Share the sweepstake</h2>
+          <h2 className="text-xl">Lock the draw</h2>
           <p className="mt-1 text-sm text-slate-muted">
-            Everything is stored in the link — copy it to share the draw with everyone.
+            When everyone's happy, lock it to freeze the participants and team assignments. The
+            assignment editor is hidden and the roster moves below the leaderboard.
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input
-            type="text"
-            readOnly
-            value={shareUrl}
-            aria-label="Shareable sweepstake link"
-            onFocus={(e) => e.currentTarget.select()}
-            className="min-w-0 flex-1 rounded-full border border-line bg-mist px-4 py-2.5 text-sm text-slate-muted focus:border-brand-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
-          />
-          <button type="button" className="nw-btn-primary shrink-0" onClick={handleCopy}>
-            {copied ? '✓ Copied!' : '🔗 Copy link'}
-          </button>
-        </div>
+        <button
+          type="button"
+          className="nw-btn-primary"
+          onClick={handleLock}
+          disabled={!canLock}
+          aria-disabled={!canLock}
+        >
+          🔒 Lock the draw
+        </button>
+        {!canLock && (
+          <p className="text-xs text-slate-muted">
+            Add at least one participant and assign a team before locking.
+          </p>
+        )}
       </section>
+
+      <ShareCard state={state} />
     </div>
   )
 }
