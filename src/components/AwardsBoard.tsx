@@ -5,6 +5,7 @@ import type { PrizeStanding } from '../lib/prizes'
 import OwnerPill from './OwnerPill'
 import Flag from './Flag'
 import { launchConfetti } from '../lib/confetti'
+import { prizeEmojiStyle } from '../lib/prizeStyle'
 
 interface Props {
   prizeStandings: PrizeStanding[]
@@ -54,7 +55,7 @@ export default function AwardsBoard({ prizeStandings, state, meId }: Readonly<Pr
               className="nw-card flex flex-col p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-violet"
             >
               <div className="flex items-start justify-between">
-                <span className="text-3xl" aria-hidden>
+                <span className="text-3xl" aria-hidden style={prizeEmojiStyle(p.def.key)}>
                   {p.def.emoji}
                 </span>
                 {team && (
