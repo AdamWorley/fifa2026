@@ -67,7 +67,8 @@ export function launchConfetti(options: ConfettiOptions = {}): void {
     glyph: glyphs ? glyphs[i % glyphs.length] : undefined,
   }))
 
-  const durationMs = 2600
+  // Safety cap so a stray particle can never keep the canvas alive forever.
+  const maxDurationMs = 8000
   let start: number | null = null
 
   function frame(now: number) {
@@ -75,15 +76,22 @@ export function launchConfetti(options: ConfettiOptions = {}): void {
     const elapsed = now - start
     ctx!.clearRect(0, 0, width, height)
 
-    // Fade the whole burst out over its final third.
-    const alpha = elapsed > durationMs * 0.66 ? Math.max(0, 1 - (elapsed - durationMs * 0.66) / (durationMs * 0.34)) : 1
+    // Gently fade everything out over the final stretch of the safety window.
+    const alpha =
+      elapsed > maxDurationMs * 0.85
+        ? Math.max(0, 1 - (elapsed - maxDurationMs * 0.85) / (maxDurationMs * 0.15))
+        : 1
     ctx!.globalAlpha = alpha
 
+    let allLanded = true
     for (const p of particles) {
       p.x += p.vx
       p.y += p.vy
       p.vy += 0.05 // gravity
       p.rotation += p.spin
+
+      // Keep going until the last particle has cleared the bottom edge.
+      if (p.y - p.size < height) allLanded = false
 
       ctx!.save()
       ctx!.translate(p.x, p.y)
@@ -100,7 +108,7 @@ export function launchConfetti(options: ConfettiOptions = {}): void {
       ctx!.restore()
     }
 
-    if (elapsed < durationMs) {
+    if (!allLanded && elapsed < maxDurationMs) {
       requestAnimationFrame(frame)
     } else {
       canvas.remove()
