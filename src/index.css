@@ -77,4 +77,32 @@
       animation: none;
     }
   }
+
+  /* View Transitions: tab panels slide-and-fade as you switch views.
+     The panel carries view-transition-name: tab-panel (see App.tsx), so it
+     animates on its own while the unchanged header/nav/footer stay put. */
+  @keyframes nw-panel-out {
+    to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+  @keyframes nw-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+  ::view-transition-old(tab-panel) {
+    animation: nw-panel-out 0.18s cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  ::view-transition-new(tab-panel) {
+    animation: nw-panel-in 0.26s cubic-bezier(0, 0, 0.2, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(tab-panel),
+    ::view-transition-new(tab-panel) {
+      animation: none;
+    }
+  }
 }
