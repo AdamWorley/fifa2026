@@ -131,6 +131,40 @@ export function launchConfetti(options: ConfettiOptions = {}): void {
 // The filter itself is shared with the rendered prize emoji via prizeStyle.
 const GOLD_GLYPHS = new Set(['👟'])
 
+// Emoji volley for the chaos trigger — a bit of everything celebratory.
+const CHAOS_EMOJI = ['⚽', '🏆', '🎉', '🥅', '🎊', '🟨']
+
+/**
+ * 🥚 Total chaos: shake the screen and unleash overlapping confetti bursts —
+ * a big sheet of paper plus staggered emoji volleys. Triggered by the Konami
+ * code (see useKonamiCode).
+ */
+export function launchChaos(): void {
+  if (typeof document === 'undefined') return
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+
+  shakeScreen()
+  launchConfetti({ count: 200 })
+  // Stagger the emoji volleys so the storm keeps replenishing itself.
+  CHAOS_EMOJI.forEach((emoji, i) => {
+    window.setTimeout(() => launchConfetti({ emoji, count: 60 }), 150 + i * 220)
+  })
+}
+
+/** Briefly shake the app content (the confetti canvas sits on body, so it stays put). */
+function shakeScreen(): void {
+  const target = document.getElementById('root') ?? document.body
+  target.classList.remove('chaos-shake') // restart cleanly if already shaking
+  // Force a reflow so re-adding the class always retriggers the animation.
+  void target.offsetWidth
+  target.classList.add('chaos-shake')
+  target.addEventListener(
+    'animationend',
+    () => target.classList.remove('chaos-shake'),
+    { once: true },
+  )
+}
+
 /** Render a single glyph to a small square canvas so it can be blitted cheaply. */
 function makeGlyphSprite(glyph: string): HTMLCanvasElement {
   const px = 64

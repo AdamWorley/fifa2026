@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import Flag from './Flag'
-import { launchConfetti } from '../lib/confetti'
+import { launchConfetti, launchChaos } from '../lib/confetti'
+import { useKonamiCode } from '../lib/useKonamiCode'
 
 // 🥚 Easter egg: each host flag links to a gloriously bad kazoo cover
 // (well, a search for one) of that nation's anthem. Worth a click.
@@ -157,6 +158,9 @@ function Footer() {
 }
 
 export default function Layout({ children }: Readonly<{ children: ReactNode }>) {
+  // 🥚 Konami code (↑↑↓↓←→←→ B A) unleashes confetti chaos and shakes the screen.
+  useKonamiCode(launchChaos)
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
