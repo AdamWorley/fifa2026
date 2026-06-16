@@ -5,8 +5,9 @@ import { resolveTeamId } from './aliases'
 /** Total group-stage group fixtures that must finish before awards are final. */
 const TOTAL_GROUP_MATCHES = 72
 
-// A red card counts the same as a yellow when tallying "most cards". A second
-// yellow shows in the data as a yellow followed by a red, so it counts as 2.
+// Each booked player counts once towards "most cards": a yellow and a red weigh
+// the same, and a second-yellow dismissal arrives as a single red (the prior
+// yellow is not counted separately), so a player can add at most one card.
 const RED_CARD_WEIGHT = 1
 
 export interface TeamStats {
