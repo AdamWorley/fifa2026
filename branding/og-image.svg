@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1f38" />
+      <stop offset="0.55" stop-color="#112e51" />
+      <stop offset="1" stop-color="#1c4474" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde68a" />
+      <stop offset="0.5" stop-color="#f5c542" />
+      <stop offset="1" stop-color="#c8941a" />
+    </linearGradient>
+    <pattern id="net" width="46" height="46" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <path d="M0 0 V46 M0 0 H46" stroke="#ffffff" stroke-opacity="0.06" stroke-width="2" fill="none" />
+    </pattern>
+    <pattern id="mow" width="160" height="130" patternUnits="userSpaceOnUse">
+      <rect width="80" height="130" fill="#ffffff" fill-opacity="0.05" />
+      <rect x="80" width="80" height="130" fill="#000000" fill-opacity="0.06" />
+    </pattern>
+  </defs>
+
+  <!-- backdrop -->
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect width="1200" height="630" fill="url(#net)" />
+
+  <!-- faint football, top right -->
+  <g transform="translate(1015,70)" opacity="0.08">
+    <circle cx="80" cy="80" r="78" fill="none" stroke="#ffffff" stroke-width="3" />
+    <polygon points="80,40 108,60 97,93 63,93 52,60" fill="#ffffff" />
+    <g stroke="#ffffff" stroke-width="3" stroke-linecap="round">
+      <line x1="80" y1="40" x2="80" y2="6" />
+      <line x1="108" y1="60" x2="140" y2="48" />
+      <line x1="97" y1="93" x2="118" y2="124" />
+      <line x1="63" y1="93" x2="42" y2="124" />
+      <line x1="52" y1="60" x2="20" y2="48" />
+    </g>
+  </g>
+
+  <!-- trophy -->
+  <g transform="translate(96,168) scale(3.0)">
+    <path d="M21 16 C11 16 11 30 23 32" fill="none" stroke="url(#gold)" stroke-width="3.2" stroke-linecap="round" />
+    <path d="M43 16 C53 16 53 30 41 32" fill="none" stroke="url(#gold)" stroke-width="3.2" stroke-linecap="round" />
+    <path d="M19 12 H45 V22 C45 33 38.5 39 32 39 C25.5 39 19 33 19 22 Z" fill="url(#gold)" />
+    <rect x="28.5" y="39" width="7" height="9" fill="url(#gold)" />
+    <path d="M22.5 48 H41.5 L43.5 54 H20.5 Z" fill="url(#gold)" />
+    <rect x="18" y="54" width="28" height="5" rx="1.5" fill="url(#gold)" />
+  </g>
+
+  <!-- wordmark -->
+  <text x="360" y="250" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="78" fill="#ffffff" letter-spacing="1">FIFA WORLD CUP</text>
+  <text x="360" y="372" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="116" fill="url(#gold)">2026</text>
+  <text x="364" y="436" font-family="Arial, sans-serif" font-weight="700" font-size="34" fill="#00c5f0" letter-spacing="9">OFFICE SWEEPSTAKE</text>
+
+  <!-- grass pitch -->
+  <rect x="0" y="500" width="1200" height="130" fill="#1f7a3d" />
+  <rect x="0" y="500" width="1200" height="130" fill="url(#mow)" />
+  <rect x="0" y="497" width="1200" height="5" fill="#ffffff" fill-opacity="0.85" />
+
+  <!-- host nations on the pitch -->
+  <text x="600" y="582" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="32" fill="#ffffff" letter-spacing="5">CANADA  ·  USA  ·  MEXICO</text>
+</svg>
