@@ -5,6 +5,7 @@ import {
   addParticipant,
   clearAssignments,
   ownerOf,
+  randomDraw,
   removeParticipant,
   renameParticipant,
   setAssignment,
@@ -19,7 +20,8 @@ interface Props {
   setState: (updater: (prev: SweepstakeState) => SweepstakeState) => void
 }
 
-const TOTAL_TEAMS = GROUPS.reduce((sum, g) => sum + g.teamIds.length, 0)
+const ALL_TEAM_IDS = GROUPS.flatMap((g) => g.teamIds)
+const TOTAL_TEAMS = ALL_TEAM_IDS.length
 
 export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
   const [newName, setNewName] = useState('')
@@ -44,6 +46,18 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
     const ok = globalThis.confirm('Clear all team assignments? Participants are kept.')
     if (ok) setState((prev) => clearAssignments(prev))
   }
+
+  function handleRandomDraw() {
+    if (state.participants.length === 0) return
+    if (
+      assignedCount > 0 &&
+      !globalThis.confirm('Randomly redraw every team? This replaces the current assignments.')
+    )
+      return
+    setState((prev) => randomDraw(prev, ALL_TEAM_IDS))
+  }
+
+  const canDraw = state.participants.length > 0
 
   function handleLock() {
     const message = allAssigned
@@ -119,17 +133,29 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
         open={assignOpen}
         onToggle={() => setAssignOpen((o) => !o)}
       >
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <p className="text-sm text-slate-muted">Pick an owner for each country.</p>
-          {assignedCount > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-slate-muted">Pick an owner for each country, or draw at random.</p>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={handleReset}
-              className="nw-btn bg-white px-3 py-1.5 text-xs text-navy ring-1 ring-line hover:bg-mist"
+              onClick={handleRandomDraw}
+              disabled={!canDraw}
+              aria-disabled={!canDraw}
+              title={canDraw ? undefined : 'Add a participant first'}
+              className="nw-btn bg-white px-3 py-1.5 text-xs text-navy ring-1 ring-line hover:bg-mist disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ↺ Reset draw
+              🎲 Random draw
             </button>
-          )}
+            {assignedCount > 0 && (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="nw-btn bg-white px-3 py-1.5 text-xs text-navy ring-1 ring-line hover:bg-mist"
+              >
+                ↺ Reset draw
+              </button>
+            )}
+          </div>
         </div>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {GROUPS.map((group) => (
@@ -169,32 +195,24 @@ export default function AssignmentEditor({ state, setState }: Readonly<Props>) {
             </div>
           ))}
         </div>
-      </CollapsibleCard>
 
-      {/* Lock the draw */}
-      <section className="nw-card space-y-3 p-6">
-        <div>
-          <h2 className="text-xl">Lock the draw</h2>
-          <p className="mt-1 text-sm text-slate-muted">
-            When everyone's happy, lock it to freeze the participants and team assignments. The
-            assignment editor is hidden and the roster moves below the leaderboard.
+        <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-line pt-5">
+          <button
+            type="button"
+            className="nw-btn-primary"
+            onClick={handleLock}
+            disabled={!canLock}
+            aria-disabled={!canLock}
+          >
+            🔒 Lock the draw
+          </button>
+          <p className="flex-1 text-xs text-slate-muted">
+            {canLock
+              ? 'Freezes participants and assignments. The editor is hidden and the roster moves below the leaderboard (you can unlock later).'
+              : 'Add at least one participant and assign a team before locking.'}
           </p>
         </div>
-        <button
-          type="button"
-          className="nw-btn-primary"
-          onClick={handleLock}
-          disabled={!canLock}
-          aria-disabled={!canLock}
-        >
-          🔒 Lock the draw
-        </button>
-        {!canLock && (
-          <p className="text-xs text-slate-muted">
-            Add at least one participant and assign a team before locking.
-          </p>
-        )}
-      </section>
+      </CollapsibleCard>
 
       <ShareCard state={state} />
     </div>
