@@ -1,10 +1,25 @@
 import type { ReactNode } from 'react'
 import Flag from './Flag'
+import { launchConfetti } from '../lib/confetti'
 
+// 🥚 Easter egg: each host flag links to a gloriously bad kazoo cover
+// (well, a search for one) of that nation's anthem. Worth a click.
 const HOST_NATIONS = [
-  { iso: 'CA', name: 'Canada' },
-  { iso: 'US', name: 'USA' },
-  { iso: 'MX', name: 'Mexico' },
+  {
+    iso: 'CA',
+    name: 'Canada',
+    anthem: 'https://www.youtube.com/watch?v=-ee1pCYg9IE',
+  },
+  {
+    iso: 'US',
+    name: 'USA',
+    anthem: 'https://www.youtube.com/watch?v=BNO11qIh8X8',
+  },
+  {
+    iso: 'MX',
+    name: 'Mexico',
+    anthem: 'https://www.youtube.com/shorts/vpsvcqdSmR8',
+  },
 ]
 
 /** Faint football silhouette used as a decorative accent. */
@@ -96,10 +111,16 @@ function Header() {
           {HOST_NATIONS.map((host, i) => (
             <div key={host.iso} className="flex items-center gap-2.5">
               {i > 0 && <span className="text-white/30" aria-hidden>·</span>}
-              <span className="flex items-center gap-1.5">
+              <a
+                href={host.anthem}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Play the ${host.name} anthem (sort of)`}
+                className="flex items-center gap-1.5 rounded transition hover:scale-110 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
+              >
                 <Flag iso={host.iso} title={host.name} className="text-base" />
                 {host.name}
-              </span>
+              </a>
             </div>
           ))}
         </div>
@@ -123,6 +144,13 @@ function Footer() {
         <p className="text-xs italic text-white/70">
           🎶 Tsamina mina, eh eh — waka waka, eh eh. This time for 2026.
         </p>
+        <button
+          type="button"
+          onClick={() => launchConfetti()}
+          className="mt-3 w-fit rounded-full border border-white/40 bg-white/10 px-4 py-1.5 text-xs font-black uppercase tracking-wide text-white transition hover:scale-105 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
+        >
+          🎉 Celebrate
+        </button>
       </div>
     </footer>
   )
