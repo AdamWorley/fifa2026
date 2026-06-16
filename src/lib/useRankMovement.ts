@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import type { LeaderboardEntry } from './prizes'
 
 const KEY = 'wc2026:leaderboard-ranks'
 
@@ -15,11 +14,11 @@ function readRanks(): Record<string, number> {
 }
 
 /**
- * Rank change for each participant since the page was last loaded. Positive =
- * moved up the board. The baseline is captured once on mount (from the previous
- * visit, persisted in localStorage); the latest order is saved back for next time.
+ * Rank change for each entry since the page was last loaded. Positive = moved up
+ * the board. The baseline is captured once on mount (from the previous visit,
+ * persisted in localStorage); the latest order is saved back for next time.
  */
-export function useRankMovement(leaderboard: LeaderboardEntry[]): Map<string, number> {
+export function useRankMovement(leaderboard: ReadonlyArray<{ id: string }>): Map<string, number> {
   // Captured once on mount (lazy init runs a single time) — the "last visit" baseline.
   const [baseline] = useState(readRanks)
 

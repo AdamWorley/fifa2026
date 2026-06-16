@@ -1,6 +1,6 @@
-import type { TeamId } from '../data/tournament'
+import { getTeam, type TeamId } from '../data/tournament'
 import type { SweepstakeState } from './urlState'
-import { ownerOf, teamsByParticipant } from './sweepstake'
+import { ownerOf } from './sweepstake'
 import type { Awards, TeamStats, TournamentResult } from './standings'
 
 export interface PrizeDef {
@@ -81,29 +81,40 @@ export function computePrizeStandings(
   })
 }
 
-export interface LeaderboardTeam {
+export interface TeamLeaderboardEntry {
+  /** teamId, also the stable id used for rank-movement tracking. */
+  id: TeamId
   teamId: TeamId
-  /** Group-stage match points this team has earned. */
+  /** Group-stage match points this team has earned (the ranking score). */
   points: number
   /** Prizes this team currently holds. */
   prizes: PrizeDef[]
+  /** Participant the team was drawn by. */
+  ownerId: string
+  ownerName: string
 }
 
-export interface LeaderboardEntry {
-  id: string
-  name: string
-  teams: LeaderboardTeam[]
-  /** Total group-stage match points across all owned teams (ranking score). */
-  points: number
+/** A per-country leaderboard split by where each drawn team is in its run. */
+export interface TeamLeaderboard {
+  /** Still in the tournament and has played — ranked by match points. */
+  playing: TeamLeaderboardEntry[]
+  /** Drawn but yet to kick off (no matches played). */
+  upcoming: TeamLeaderboardEntry[]
+  /** Knocked out — ordered by the points they finished on. */
+  eliminated: TeamLeaderboardEntry[]
 }
 
-/** Build a per-participant leaderboard, highest match-points total first. */
-export function buildLeaderboard(
+/**
+ * Build a per-country leaderboard, split into teams still playing, teams yet to
+ * play, and teams that have been knocked out. Within each section the highest
+ * match-points come first, with team name as the tie-breaker.
+ */
+export function buildTeamLeaderboard(
   state: SweepstakeState,
   prizeStandings: PrizeStanding[],
   teamStats: Map<TeamId, TeamStats>,
-): LeaderboardEntry[] {
-  const teamsByOwner = teamsByParticipant(state)
+  eliminated: Set<TeamId>,
+): TeamLeaderboard {
   const prizesByTeam = new Map<TeamId, PrizeDef[]>()
   for (const p of prizeStandings) {
     if (p.teamId === null) continue
@@ -111,21 +122,34 @@ export function buildLeaderboard(
     prizesByTeam.get(p.teamId)!.push(p.def)
   }
 
-  return state.participants
-    .map((participant, index) => {
-      const teams = (teamsByOwner.get(participant.id) ?? [])
-        .filter((teamId) => (teamStats.get(teamId)?.played ?? 0) > 0)
-        .map((teamId) => ({
-          teamId,
-          points: teamStats.get(teamId)?.points ?? 0,
-          prizes: prizesByTeam.get(teamId) ?? [],
-        }))
-      return {
-        id: participant.id,
-        name: participant.name || `Player ${index + 1}`,
-        teams,
-        points: teams.reduce((sum, t) => sum + t.points, 0),
-      }
-    })
-    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
+  const nameById = new Map(
+    state.participants.map((p, index) => [p.id, p.name || `Player ${index + 1}`]),
+  )
+
+  const byName = (a: TeamLeaderboardEntry, b: TeamLeaderboardEntry) =>
+    getTeam(a.teamId)!.name.localeCompare(getTeam(b.teamId)!.name)
+  const byPoints = (a: TeamLeaderboardEntry, b: TeamLeaderboardEntry) =>
+    b.points - a.points || byName(a, b)
+
+  const board: TeamLeaderboard = { playing: [], upcoming: [], eliminated: [] }
+
+  for (const [teamId, ownerId] of Object.entries(state.assignments) as [TeamId, string][]) {
+    if (!nameById.has(ownerId)) continue
+    const entry: TeamLeaderboardEntry = {
+      id: teamId,
+      teamId,
+      points: teamStats.get(teamId)?.points ?? 0,
+      prizes: prizesByTeam.get(teamId) ?? [],
+      ownerId,
+      ownerName: nameById.get(ownerId)!,
+    }
+    if (eliminated.has(teamId)) board.eliminated.push(entry)
+    else if ((teamStats.get(teamId)?.played ?? 0) === 0) board.upcoming.push(entry)
+    else board.playing.push(entry)
+  }
+
+  board.playing.sort(byPoints)
+  board.upcoming.sort(byName)
+  board.eliminated.sort(byPoints)
+  return board
 }
