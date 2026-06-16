@@ -15,6 +15,8 @@ export interface SweepstakeState {
   participants: Participant[]
   /** teamId -> owning participant id. Absent = unassigned. */
   assignments: Record<TeamId, string>
+  /** Once locked, the draw is read-only: no editing participants or assignments. */
+  locked?: boolean
 }
 
 const PARAM = 's'
@@ -34,6 +36,7 @@ interface WireState {
   t?: string
   p: WireParticipant[]
   a: Record<string, string | number>
+  l?: 1
 }
 
 function toWire(state: SweepstakeState): WireState {
@@ -42,6 +45,7 @@ function toWire(state: SweepstakeState): WireState {
     a: state.assignments,
   }
   if (state.title) wire.t = state.title
+  if (state.locked) wire.l = 1
   return wire
 }
 
@@ -64,11 +68,13 @@ function fromWire(wire: WireState): SweepstakeState {
       if (id !== undefined && validIds.has(id)) assignments[teamId] = id
     }
   }
-  return {
+  const result: SweepstakeState = {
     title: typeof wire.t === 'string' ? wire.t : undefined,
     participants,
     assignments,
   }
+  if (wire.l) result.locked = true
+  return result
 }
 
 export function encodeState(state: SweepstakeState): string {

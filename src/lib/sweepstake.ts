@@ -92,6 +92,11 @@ export function clearAssignments(state: SweepstakeState): SweepstakeState {
   return { ...state, assignments: {} }
 }
 
+/** Lock or unlock the draw. A locked draw is read-only (no editing participants/assignments). */
+export function setLocked(state: SweepstakeState, locked: boolean): SweepstakeState {
+  return { ...state, locked }
+}
+
 /**
  * Randomly distribute the given teams across participants as evenly as possible.
  * Existing assignments are cleared. Returns a new state.
