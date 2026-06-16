@@ -16,6 +16,7 @@ import { useSweepstake } from './lib/useSweepstake'
 import { useViewer } from './lib/useViewer'
 import { useTournamentData } from './lib/useTournamentData'
 import { readTabFromPath, TABS, writeTabToPath, type Tab } from './lib/tabs'
+import { withViewTransition } from './lib/viewTransition'
 
 function App() {
   const [state, setState] = useSweepstake()
@@ -25,14 +26,17 @@ function App() {
 
   // Keep the active tab in sync with browser back/forward navigation.
   useEffect(() => {
-    const onPop = () => setTabState(readTabFromPath())
+    const onPop = () => withViewTransition(() => setTabState(readTabFromPath()))
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
   function setTab(next: Tab) {
-    setTabState(next)
-    writeTabToPath(next)
+    if (next === tab) return
+    withViewTransition(() => {
+      setTabState(next)
+      writeTabToPath(next)
+    })
   }
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -92,7 +96,12 @@ function App() {
         })}
       </nav>
 
-      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+      <div
+        role="tabpanel"
+        id={`panel-${tab}`}
+        aria-labelledby={`tab-${tab}`}
+        style={{ viewTransitionName: 'tab-panel' }}
+      >
         {tab === 'sweepstake' &&
           (state.locked ? (
             <div className="space-y-8">
