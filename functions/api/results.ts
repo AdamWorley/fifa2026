@@ -94,14 +94,13 @@ function teamKey(name: string): string {
 }
 
 function countCards(region: string): Cards {
+  // Each booked player counts once. A lone yellow is a {{yel}}; a dismissal is a
+  // single {{sent off}} template whether it's a straight red or a second-yellow
+  // red. We deliberately do NOT add the prior yellow(s) of a second-yellow
+  // dismissal back in — two yellows that become a red still count as one card.
   const yellow = (region.match(/\{\{yel(\b|\|)/gi) || []).length
-  let red = 0
-  let extraYellow = 0
-  for (const m of region.matchAll(/\{\{sent off\|?(\d*)/gi)) {
-    red++
-    extraYellow += Number(m[1] || 0) // a 2nd-yellow dismissal implies prior yellows
-  }
-  return { yellow: yellow + extraYellow, red }
+  const red = (region.match(/\{\{sent off(\b|\|)/gi) || []).length
+  return { yellow, red }
 }
 
 /** Find the index just past the `|}` that closes the wiki table opened at startIdx. */
