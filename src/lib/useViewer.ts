@@ -1,31 +1,40 @@
 import { useEffect, useState } from 'react'
 
-const PARAM = 'me'
+const KEY = 'fifa2026:me'
 
-function readMe(): string | null {
-  return new URLSearchParams(window.location.search).get(PARAM)
+function readStored(): string | null {
+  try {
+    return globalThis.localStorage.getItem(KEY)
+  } catch {
+    return null
+  }
 }
 
 /**
- * The current viewer's participant id, stored in a `?me=` query param that is
- * separate from the shared sweepstake state (`?s=`). Personal, not part of the
- * draw — so it rides along in the address bar without changing what others see.
+ * The current viewer's participant id, stored in localStorage so it stays on
+ * this device only. It is personal — not part of the draw and never encoded
+ * into a shared link — so picking "who you are" can't reveal you to others.
  */
 export function useViewer() {
-  const [me, setMeState] = useState<string | null>(() => readMe())
+  const [me, setMeState] = useState<string | null>(() => readStored())
 
+  // Keep multiple tabs in sync when the choice changes elsewhere.
   useEffect(() => {
-    const onPop = () => setMeState(readMe())
-    globalThis.addEventListener('popstate', onPop)
-    return () => globalThis.removeEventListener('popstate', onPop)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === KEY) setMeState(e.newValue)
+    }
+    globalThis.addEventListener('storage', onStorage)
+    return () => globalThis.removeEventListener('storage', onStorage)
   }, [])
 
   function setMe(id: string | null) {
     setMeState(id)
-    const url = new URL(window.location.href)
-    if (id) url.searchParams.set(PARAM, id)
-    else url.searchParams.delete(PARAM)
-    window.history.replaceState(null, '', url.toString())
+    try {
+      if (id) globalThis.localStorage.setItem(KEY, id)
+      else globalThis.localStorage.removeItem(KEY)
+    } catch {
+      /* ignore — storage may be unavailable */
+    }
   }
 
   return [me, setMe] as const
