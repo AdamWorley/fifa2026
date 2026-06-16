@@ -4,6 +4,7 @@ import type { SweepstakeState } from '../lib/urlState'
 import type { PrizeStanding } from '../lib/prizes'
 import OwnerPill from './OwnerPill'
 import Flag from './Flag'
+import { launchConfetti } from '../lib/confetti'
 
 interface Props {
   prizeStandings: PrizeStanding[]
@@ -44,7 +45,14 @@ export default function AwardsBoard({ prizeStandings, state, meId }: Readonly<Pr
           const owner = p.ownerId ? getParticipant(state, p.ownerId) : null
           const value = valueLabel(p.def.key, p.value)
           return (
-            <div key={p.def.key} className="nw-card flex flex-col p-5">
+            // 🥚 Easter egg: clicking a prize card rains its emoji down the screen.
+            <button
+              type="button"
+              key={p.def.key}
+              onClick={() => launchConfetti({ emoji: p.def.emoji })}
+              title={`Celebrate the ${p.def.label}!`}
+              className="nw-card flex flex-col p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-violet"
+            >
               <div className="flex items-start justify-between">
                 <span className="text-3xl" aria-hidden>
                   {p.def.emoji}
@@ -82,7 +90,7 @@ export default function AwardsBoard({ prizeStandings, state, meId }: Readonly<Pr
                   <p className="text-sm italic text-slate-muted">To be decided</p>
                 )}
               </div>
-            </div>
+            </button>
           )
         })}
       </div>
