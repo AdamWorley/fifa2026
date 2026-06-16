@@ -37,3 +37,23 @@
     @apply nw-btn bg-white text-navy ring-1 ring-line hover:bg-mist;
   }
 }
+
+@layer utilities {
+  /* Faint goal-net mesh — diagonal threads. Layer over a coloured background. */
+  .net-texture {
+    background-image:
+      repeating-linear-gradient(45deg, transparent 0 17px, rgba(255, 255, 255, 0.04) 17px 18px),
+      repeating-linear-gradient(-45deg, transparent 0 17px, rgba(255, 255, 255, 0.04) 17px 18px);
+  }
+  /* Mowed-pitch grass: alternating light/dark vertical stripes with depth shading. */
+  .pitch-grass {
+    background-color: theme('colors.pitch.DEFAULT');
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.18)),
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.05) 0 64px,
+        rgba(0, 0, 0, 0.05) 64px 128px
+      );
+  }
+}

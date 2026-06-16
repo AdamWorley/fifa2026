@@ -20,6 +20,11 @@ export default {
           light: '#fde68a',
           dark: '#c8941a',
         },
+        pitch: {
+          DEFAULT: '#1f7a3d',
+          light: '#2f8a45',
+          dark: '#134d27',
+        },
         ink: '#17191c',
         'slate-muted': '#525860',
         mist: '#f8f9fa',
