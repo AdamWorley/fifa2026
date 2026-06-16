@@ -3,9 +3,10 @@ import Flag from './Flag'
 import { launchConfetti, launchChaos } from '../lib/confetti'
 import { useKonamiCode } from '../lib/useKonamiCode'
 import { useTapBurst } from '../lib/useTapBurst'
+import { useShakeToTrigger } from '../lib/useShakeToTrigger'
 
 // 🥚 Easter egg: each host flag links to a gloriously bad kazoo cover
-// (well, a search for one) of that nation's anthem. Worth a click.
+// of that nation's anthem. Worth a click.
 const HOST_NATIONS = [
   {
     iso: 'CA',
@@ -93,8 +94,14 @@ function TrophyMark({ className }: { className?: string }) {
 }
 
 function Header() {
-  // 🥚 Mobile-friendly chaos trigger: tap the logo five times in quick succession.
-  const onLogoTap = useTapBurst(launchChaos)
+  // 🥚 Mobile chaos triggers: tap the logo five times, or just shake the phone.
+  const onTapBurst = useTapBurst(launchChaos)
+  // Tapping the logo also primes motion access (required on iOS) for shake-to-chaos.
+  const primeMotion = useShakeToTrigger(launchChaos)
+  const onLogoTap = () => {
+    onTapBurst()
+    primeMotion()
+  }
 
   return (
     <header className="relative overflow-hidden border-b-2 border-gold bg-navy text-white">
