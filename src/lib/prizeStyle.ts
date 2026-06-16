@@ -4,7 +4,7 @@
  * emoji's own shading show through. Used both as a CSS filter on rendered
  * emoji and (via GOLD_FILTER) on the confetti sprite canvas, so they match.
  */
-export const GOLD_FILTER = 'sepia(1) saturate(5) hue-rotate(-8deg) brightness(1.15)'
+export const GOLD_FILTER = 'sepia(1) saturate(4) hue-rotate(-12deg) brightness(0.92)'
 
 /** Inline style that gold-tints a prize emoji, selected by prize key. */
 export function prizeEmojiStyle(key: string): { filter: string } | undefined {
