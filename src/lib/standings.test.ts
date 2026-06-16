@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { MatchResult } from './results'
 import {
   computeAwards,
+  computeEliminatedTeams,
   computeGroupStandings,
   computeTeamStats,
   computeTournamentResult,
@@ -85,6 +86,43 @@ describe('awards', () => {
   })
   it('is not final until all 72 group matches are played', () => {
     expect(awards.groupStageComplete).toBe(false)
+  })
+})
+
+describe('eliminated teams', () => {
+  const stats = computeTeamStats(matches)
+  const knockout = (home: string, away: string, hg: number, ag: number): MatchResult => ({
+    ...group(home, away, hg, ag),
+    stage: 'Round of 16',
+    isGroupStage: false,
+  })
+
+  it('knocks out the loser of a finished knockout match', () => {
+    const out = computeEliminatedTeams([...matches, knockout('Brazil', 'Morocco', 2, 0)], stats, false)
+    expect(out.has('morocco')).toBe(true)
+    expect(out.has('brazil')).toBe(false)
+  })
+
+  it('does not eliminate anyone on group results alone', () => {
+    expect(computeEliminatedTeams(matches, stats, false).size).toBe(0)
+  })
+
+  it('ignores unpopulated placeholder fixtures', () => {
+    const placeholder: MatchResult = {
+      ...knockout('Brazil', 'Morocco', 0, 0),
+      status: 'scheduled',
+      score: null,
+    }
+    expect(computeEliminatedTeams([...matches, placeholder], stats, false).size).toBe(0)
+  })
+
+  it('eliminates group non-qualifiers once the group stage is complete', () => {
+    // Knockout line-up names Brazil & Morocco; Scotland & Haiti played but missed out.
+    const out = computeEliminatedTeams([...matches, knockout('Brazil', 'Morocco', 2, 0)], stats, true)
+    expect(out.has('scotland')).toBe(true)
+    expect(out.has('haiti')).toBe(true)
+    expect(out.has('morocco')).toBe(true) // lost the knockout
+    expect(out.has('brazil')).toBe(false) // still alive
   })
 })
 

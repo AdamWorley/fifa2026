@@ -1,5 +1,5 @@
 import { getTeam } from '../data/tournament'
-import { getParticipant, ownerOf } from '../lib/sweepstake'
+import { getParticipant, isMyTeam, ownerOf } from '../lib/sweepstake'
 import type { SweepstakeState } from '../lib/urlState'
 import type { GroupStanding } from '../lib/standings'
 import OwnerPill from './OwnerPill'
@@ -40,8 +40,9 @@ function GroupTable({
   state,
   meId,
 }: Readonly<{ group: GroupStanding; state: SweepstakeState; meId?: string | null }>) {
+  const mineInGroup = group.rows.some((row) => isMyTeam(state, row.teamId, meId))
   return (
-    <div className="nw-card overflow-hidden">
+    <div className={`nw-card overflow-hidden ${mineInGroup ? 'ring-2 ring-brand-bright' : ''}`}>
       <div className="bg-navy px-4 py-2.5 text-sm font-black uppercase tracking-wide text-white">
         {group.name}
       </div>
@@ -66,10 +67,12 @@ function GroupTable({
             const ownerId = ownerOf(state, row.teamId)
             const owner = ownerId ? getParticipant(state, ownerId) : null
             const advancing = i < 2
+            const mine = isMyTeam(state, row.teamId, meId)
+            const rowBg = mine ? 'bg-brand-bright/10' : advancing ? 'bg-brand-cyan/5' : ''
             return (
               <tr
                 key={row.teamId}
-                className={`border-b border-line/60 last:border-0 ${advancing ? 'bg-brand-cyan/5' : ''}`}
+                className={`border-b border-line/60 last:border-0 ${rowBg}`}
               >
                 <td className="py-2 pl-3">
                   <div className="flex items-center gap-2">

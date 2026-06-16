@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TeamId } from '../data/tournament'
-import { buildLeaderboard, PRIZES, type PrizeStanding } from './prizes'
+import { buildTeamLeaderboard, PRIZES, type PrizeStanding } from './prizes'
 import type { TeamStats } from './standings'
 import type { SweepstakeState } from './urlState'
 
@@ -44,37 +44,43 @@ const prizeStandings: PrizeStanding[] = [
   { def: champion, teamId: 'argentina', value: null, final: true, ownerId: 'bo' },
 ]
 
-describe('leaderboard', () => {
-  it('ranks by total match points, with name as the tie-breaker', () => {
-    const board = buildLeaderboard(state, prizeStandings, stats)
-    // Bob & Carol tie on 9 → alphabetical; Alice on 6; Dave on 0.
-    expect(board.map((e) => e.name)).toEqual(['Bob', 'Carol', 'Alice', 'Dave'])
-    expect(board.map((e) => e.points)).toEqual([9, 9, 6, 0])
+const noneOut = new Set<TeamId>()
+
+describe('team leaderboard', () => {
+  it('ranks the playing section by match points, with team name as the tie-breaker', () => {
+    const board = buildTeamLeaderboard(state, prizeStandings, stats, noneOut)
+    // Argentina & France tie on 9 → team-name order; Brazil on 6.
+    expect(board.playing.map((e) => e.teamId)).toEqual(['argentina', 'france', 'brazil'])
+    expect(board.playing.map((e) => e.points)).toEqual([9, 9, 6])
+  })
+
+  it('records the participant each team was drawn by', () => {
+    const board = buildTeamLeaderboard(state, prizeStandings, stats, noneOut)
+    const argentina = board.playing.find((e) => e.teamId === 'argentina')!
+    expect(argentina.ownerId).toBe('bo')
+    expect(argentina.ownerName).toBe('Bob')
   })
 
   it('attaches prizes to the holding team without changing the score', () => {
-    const board = buildLeaderboard(state, prizeStandings, stats)
-    const bob = board.find((e) => e.name === 'Bob')!
-    expect(bob.points).toBe(9) // the champion prize adds no points
-
-    const argentina = bob.teams.find((t) => t.teamId === 'argentina')!
+    const board = buildTeamLeaderboard(state, prizeStandings, stats, noneOut)
+    const argentina = board.playing.find((e) => e.teamId === 'argentina')!
+    expect(argentina.points).toBe(9) // the champion prize adds no points
     expect(argentina.prizes).toEqual([champion])
 
-    const alice = board.find((e) => e.name === 'Alice')!
-    expect(alice.teams[0].prizes).toEqual([])
+    const brazil = board.playing.find((e) => e.teamId === 'brazil')!
+    expect(brazil.prizes).toEqual([])
   })
 
-  it('omits teams that have not played any matches', () => {
-    const board = buildLeaderboard(state, prizeStandings, stats)
-    const alice = board.find((e) => e.name === 'Alice')!
-    // Scotland has no entry in stats (no matches played) so it is excluded.
-    expect(alice.teams.map((t) => t.teamId)).toEqual(['brazil'])
+  it('puts teams yet to play in the upcoming section', () => {
+    const board = buildTeamLeaderboard(state, prizeStandings, stats, noneOut)
+    // Scotland (Alice's) has no entry in stats, so it is waiting to play.
+    expect(board.upcoming.map((e) => e.teamId)).toEqual(['scotland'])
+    expect(board.playing.map((e) => e.teamId)).not.toContain('scotland')
   })
 
-  it('gives participants with no teams a zero score and no teams', () => {
-    const board = buildLeaderboard(state, prizeStandings, stats)
-    const dave = board.find((e) => e.name === 'Dave')!
-    expect(dave.points).toBe(0)
-    expect(dave.teams).toEqual([])
+  it('moves knocked-out teams into the eliminated section', () => {
+    const board = buildTeamLeaderboard(state, prizeStandings, stats, new Set<TeamId>(['france']))
+    expect(board.eliminated.map((e) => e.teamId)).toEqual(['france'])
+    expect(board.playing.map((e) => e.teamId)).toEqual(['argentina', 'brazil'])
   })
 })

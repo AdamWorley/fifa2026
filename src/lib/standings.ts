@@ -153,6 +153,44 @@ export function computeAwards(
   }
 }
 
+/**
+ * Teams knocked out of the tournament. A team is out if it lost a knockout
+ * match, or — once the group stage is complete and the knockout line-up is
+ * known — if it played the group stage but didn't reach the knockouts. Group
+ * results alone never eliminate a team (the maths is left to the bracket).
+ */
+export function computeEliminatedTeams(
+  matches: MatchResult[],
+  teamStats: Map<TeamId, TeamStats>,
+  groupStageComplete: boolean,
+): Set<TeamId> {
+  const eliminated = new Set<TeamId>()
+  const qualified = new Set<TeamId>()
+
+  for (const m of matches) {
+    if (m.isGroupStage) continue
+    // Skip empty placeholder fixtures that the feed hasn't populated yet.
+    if (!m.score && m.status === 'scheduled') continue
+    const homeId = resolveTeamId(m.home)
+    const awayId = resolveTeamId(m.away)
+    if (homeId) qualified.add(homeId)
+    if (awayId) qualified.add(awayId)
+    if (m.status === 'finished' && m.score && homeId && awayId) {
+      if (m.score.home > m.score.away) eliminated.add(awayId)
+      else if (m.score.away > m.score.home) eliminated.add(homeId)
+      // A level score (penalty shoot-out) can't be resolved from goals alone.
+    }
+  }
+
+  if (groupStageComplete && qualified.size > 0) {
+    for (const s of teamStats.values()) {
+      if (s.played > 0 && !qualified.has(s.teamId)) eliminated.add(s.teamId)
+    }
+  }
+
+  return eliminated
+}
+
 export interface TournamentResult {
   champion: TeamId | null
   runnerUp: TeamId | null

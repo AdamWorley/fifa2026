@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { decodeState, encodeState, EMPTY_STATE, type SweepstakeState } from './urlState'
 import {
   addParticipant,
+  isMyTeam,
   ownerOf,
   randomDraw,
   removeParticipant,
@@ -43,6 +44,14 @@ describe('assignment helpers', () => {
   it('reads owner or null', () => {
     expect(ownerOf(sample, 'brazil')).toBe('a')
     expect(ownerOf(sample, 'japan')).toBeNull()
+  })
+
+  it('flags a team as mine only when I own it and a viewer is set', () => {
+    expect(isMyTeam(sample, 'brazil', 'a')).toBe(true)
+    expect(isMyTeam(sample, 'england', 'a')).toBe(false) // Bob's team
+    expect(isMyTeam(sample, 'japan', 'a')).toBe(false) // unassigned
+    expect(isMyTeam(sample, 'brazil', null)).toBe(false) // no viewer selected
+    expect(isMyTeam(sample, null, 'a')).toBe(false) // unknown team
   })
 
   it('groups teams by participant', () => {

@@ -3,12 +3,13 @@ import type { SweepstakeState } from './urlState'
 import { useResults } from './useResults'
 import {
   computeAwards,
+  computeEliminatedTeams,
   computeGroupStandings,
   computeTeamStats,
   computeTournamentResult,
   countFinishedGroupMatches,
 } from './standings'
-import { buildLeaderboard, computePrizeStandings } from './prizes'
+import { buildTeamLeaderboard, computePrizeStandings } from './prizes'
 
 /** One hook that fetches live results and derives every view's data. */
 export function useTournamentData(state: SweepstakeState) {
@@ -23,9 +24,13 @@ export function useTournamentData(state: SweepstakeState) {
     () => computePrizeStandings(state, awards, tournament),
     [state, awards, tournament],
   )
+  const eliminated = useMemo(
+    () => computeEliminatedTeams(matches, stats, awards.groupStageComplete),
+    [matches, stats, awards.groupStageComplete],
+  )
   const leaderboard = useMemo(
-    () => buildLeaderboard(state, prizeStandings, stats),
-    [state, prizeStandings, stats],
+    () => buildTeamLeaderboard(state, prizeStandings, stats, eliminated),
+    [state, prizeStandings, stats, eliminated],
   )
   const groupMatchesPlayed = useMemo(() => countFinishedGroupMatches(matches), [matches])
 

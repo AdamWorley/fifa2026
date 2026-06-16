@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getTeam, STAGE_LABELS, type Stage } from '../data/tournament'
 import { resolveTeamId } from '../lib/aliases'
-import { getParticipant, ownerOf } from '../lib/sweepstake'
+import { getParticipant, isMyTeam, ownerOf } from '../lib/sweepstake'
 import {
   formatUtcOffset,
   matchPhase,
@@ -229,9 +229,12 @@ function MatchCard({
       : undefined
   const statsUrl = googleMatchUrl(match.home, match.away)
   const phase = matchPhase(match, now)
+  const mine =
+    isMyTeam(state, resolveTeamId(match.home), meId) ||
+    isMyTeam(state, resolveTeamId(match.away), meId)
 
   return (
-    <div className="nw-card p-3 text-sm">
+    <div className={`nw-card p-3 text-sm ${mine ? 'ring-2 ring-brand-bright' : ''}`}>
       <div className="mb-2 flex items-center justify-between gap-2 text-xs">
         <span className="truncate text-slate-muted" title={venueTime}>
           {date}
