@@ -11,6 +11,15 @@ export function ownerOf(state: SweepstakeState, teamId: TeamId): string | null {
   return state.assignments[teamId] ?? null
 }
 
+/** True when the team is owned by the viewing participant (`meId`). */
+export function isMyTeam(
+  state: SweepstakeState,
+  teamId: TeamId | null,
+  meId?: string | null,
+): boolean {
+  return !!meId && !!teamId && ownerOf(state, teamId) === meId
+}
+
 /** teamIds owned by each participant, keyed by participant id. */
 export function teamsByParticipant(state: SweepstakeState): Map<string, TeamId[]> {
   const map = new Map<string, TeamId[]>()

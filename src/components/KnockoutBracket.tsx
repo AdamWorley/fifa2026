@@ -5,7 +5,7 @@ import {
   type Stage,
 } from '../data/tournament'
 import { resolveTeamId } from '../lib/aliases'
-import { getParticipant, ownerOf } from '../lib/sweepstake'
+import { getParticipant, isMyTeam, ownerOf } from '../lib/sweepstake'
 import type { MatchResult } from '../lib/results'
 import type { SweepstakeState } from '../lib/urlState'
 import OwnerPill from './OwnerPill'
@@ -120,8 +120,9 @@ function MatchCard({
 }) {
   const homeWon = row.score ? row.score.home > row.score.away : false
   const awayWon = row.score ? row.score.away > row.score.home : false
+  const mine = isMyTeam(state, row.homeId, meId) || isMyTeam(state, row.awayId, meId)
   return (
-    <div className="nw-card p-3 text-sm">
+    <div className={`nw-card p-3 text-sm ${mine ? 'ring-2 ring-brand-bright' : ''}`}>
       <Side
         teamId={row.homeId}
         label={row.homeLabel}
