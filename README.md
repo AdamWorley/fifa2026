@@ -1,4 +1,4 @@
-# Netwealth · World Cup 2026 Sweepstake
+# FIFA World Cup 2026 · Office Sweepstake
 
 A branded, self-updating tracker for an office World Cup 2026 sweepstake. Assign
 teams to colleagues, share a link, and watch the leaderboard and prizes update
