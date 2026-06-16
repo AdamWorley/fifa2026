@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Netwealth brand palette (extracted from netwealth.com/css/main.css)
+        // Core brand palette (navy + cyan) paired with a World Cup gold accent
         navy: {
           DEFAULT: '#112e51',
           light: '#1c4474',
@@ -14,6 +14,11 @@ export default {
           cyan: '#00a2c5',
           bright: '#00c5f0',
           violet: '#1d006f',
+        },
+        gold: {
+          DEFAULT: '#f5c542',
+          light: '#fde68a',
+          dark: '#c8941a',
         },
         ink: '#17191c',
         'slate-muted': '#525860',
