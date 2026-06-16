@@ -17,28 +17,21 @@ export default function ViewerSelect({ participants, meId, setMeId }: Readonly<P
   const value = participants.some((p) => p.id === meId) ? meId! : ''
   const picked = value !== ''
 
-  // Until you've picked, nudge with the gold accent; once chosen, settle into navy.
+  // Until you've picked, nudge with a soft gold tint; once chosen, settle into a calm navy tint.
   const shell = picked
-    ? 'border-navy bg-navy text-white'
-    : 'border-gold-dark bg-gold-light text-navy shadow-card'
+    ? 'border-navy/30 bg-navy/5 text-navy'
+    : 'border-gold-dark/40 bg-gold-light/40 text-navy'
 
   return (
     <label
-      className={`inline-flex items-center gap-2 rounded-full border-2 px-4 py-1.5 text-sm font-bold transition-colors ${shell}`}
+      className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-bold transition-colors ${shell}`}
     >
-      <span aria-hidden className="text-base leading-none">
-        {picked ? '🙋' : '👋'}
-      </span>
-      <span className={picked ? 'text-white/80' : 'text-navy/70'}>
-        {picked ? "You're" : 'Viewing as'}
-      </span>
+      <span className="text-navy/60">{picked ? "You're" : 'Viewing as'}</span>
       <select
         value={value}
         onChange={(e) => setMeId(e.target.value === '' ? null : e.target.value)}
         aria-label="Choose which player you are"
-        className={`-mr-1 cursor-pointer rounded-full border-none bg-transparent py-0.5 pl-1 pr-1 text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan ${
-          picked ? 'text-white' : 'text-navy'
-        }`}
+        className="-mr-1 cursor-pointer rounded-full border-none bg-transparent py-0.5 pl-1 pr-1 text-sm font-bold text-navy focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan"
       >
         <option value="">Pick your name…</option>
         {participants.map((p, i) => (
