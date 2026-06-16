@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import Flag from './Flag'
 import { launchConfetti, launchChaos } from '../lib/confetti'
 import { useKonamiCode } from '../lib/useKonamiCode'
+import { useTapBurst } from '../lib/useTapBurst'
 
 // 🥚 Easter egg: each host flag links to a gloriously bad kazoo cover
 // (well, a search for one) of that nation's anthem. Worth a click.
@@ -92,12 +93,15 @@ function TrophyMark({ className }: { className?: string }) {
 }
 
 function Header() {
+  // 🥚 Mobile-friendly chaos trigger: tap the logo five times in quick succession.
+  const onLogoTap = useTapBurst(launchChaos)
+
   return (
     <header className="relative overflow-hidden border-b-2 border-gold bg-navy text-white">
       <div className="net-texture pointer-events-none absolute inset-0" aria-hidden />
       <FootballGlyph className="pointer-events-none absolute -right-6 -top-8 h-32 w-32 text-white/5" />
       <div className="nw-container relative flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex cursor-default items-center gap-3 select-none" onClick={onLogoTap}>
           <TrophyMark className="h-10 w-10 shrink-0" />
           <div className="flex flex-col leading-tight">
             <span className="text-lg font-black uppercase tracking-tight text-white sm:text-xl">
