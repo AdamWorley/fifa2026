@@ -2,6 +2,7 @@ import { getTeam } from '../data/tournament'
 import { participantColor } from '../lib/colors'
 import type { TeamLeaderboard, TeamLeaderboardEntry } from '../lib/prizes'
 import { useRankMovement } from '../lib/useRankMovement'
+import { prizeEmojiStyle } from '../lib/prizeStyle'
 import Flag from './Flag'
 
 interface Props {
@@ -82,6 +83,7 @@ function TeamCard({ entry, meId, rank, medal, movement, showPoints, dim }: Reado
             role="img"
             aria-label={prize.label}
             title={`${prize.label} — ${prize.blurb}`}
+            style={prizeEmojiStyle(prize.key)}
           >
             {prize.emoji}
           </span>

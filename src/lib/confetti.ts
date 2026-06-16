@@ -16,6 +16,8 @@ interface ConfettiOptions {
   count?: number
 }
 
+import { GOLD_FILTER } from './prizeStyle'
+
 const COLOURS = ['#f5c542', '#112e51', '#0098db', '#7c3aed', '#ffffff', '#e11d48']
 
 interface Particle {
@@ -125,6 +127,10 @@ export function launchConfetti(options: ConfettiOptions = {}): void {
   requestAnimationFrame(frame)
 }
 
+// Glyphs we want to recolour gold (the Golden Boot's trainer ships grey).
+// The filter itself is shared with the rendered prize emoji via prizeStyle.
+const GOLD_GLYPHS = new Set(['👟'])
+
 /** Render a single glyph to a small square canvas so it can be blitted cheaply. */
 function makeGlyphSprite(glyph: string): HTMLCanvasElement {
   const px = 64
@@ -135,6 +141,8 @@ function makeGlyphSprite(glyph: string): HTMLCanvasElement {
   g.font = `${Math.floor(px * 0.78)}px serif`
   g.textAlign = 'center'
   g.textBaseline = 'middle'
+  // Canvas filters tint the glyph; harmless no-op where unsupported.
+  if (GOLD_GLYPHS.has(glyph) && 'filter' in g) g.filter = GOLD_FILTER
   g.fillText(glyph, px / 2, px / 2)
   return c
 }
