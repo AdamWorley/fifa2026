@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react'
-import { matchPhase, upcomingMatches, type MatchResult } from '../lib/results'
+import { getTeam, type TeamId } from '../data/tournament'
+import { teamsByParticipant } from '../lib/sweepstake'
+import { nextMatchesForTeams, pickNext } from '../lib/nextMatches'
+import type { MatchResult } from '../lib/results'
+import type { SweepstakeState } from '../lib/urlState'
+import Flag from './Flag'
 
 interface Props {
   matches: MatchResult[]
-}
-
-function pickNext(matches: MatchResult[], now: number): { match: MatchResult; live: boolean } | null {
-  // A match in play wins; the feed never sends 'live', so derive it from kickoff vs now.
-  const live = matches.find((m) => matchPhase(m, now) === 'now')
-  if (live) return { match: live, live: true }
-  const upcoming = upcomingMatches(matches, now)
-  return upcoming.length ? { match: upcoming[0], live: false } : null
+  state: SweepstakeState
+  meId?: string | null
 }
 
 /** Human "2d 3h" / "3h 12m" / "8m" from a millisecond gap. */
@@ -43,22 +42,22 @@ function formatKickoff(iso: string): string {
   })
 }
 
-/** A compact banner showing the live match, or a countdown to the next kickoff. */
-export default function NextMatchCountdown({ matches }: Readonly<Props>) {
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    const timer = globalThis.setInterval(() => setNow(Date.now()), 30_000)
-    return () => globalThis.clearInterval(timer)
-  }, [])
-
-  const next = pickNext(matches, now)
-  if (!next) return null
-  const { match, live } = next
-
+/** A single row: the fixture, plus a live link or a countdown to kickoff. */
+function MatchRow({
+  match,
+  live,
+  now,
+  teamId,
+}: Readonly<{ match: MatchResult; live: boolean; now: number; teamId?: TeamId }>) {
+  const team = teamId ? getTeam(teamId) : undefined
   return (
-    <div className="nw-card flex flex-wrap items-center gap-x-3 gap-y-1 p-4 text-sm">
-      {live ? (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      {team ? (
+        <span className="inline-flex items-center gap-1.5 font-black uppercase tracking-wide text-brand-cyan">
+          <Flag iso={team.iso} title={team.name} />
+          {team.name}
+        </span>
+      ) : live ? (
         <span className="inline-flex items-center gap-1.5 font-black uppercase tracking-wide text-emerald-600">
           <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" aria-hidden />
           Live now
@@ -76,6 +75,12 @@ export default function NextMatchCountdown({ matches }: Readonly<Props>) {
           rel="noopener noreferrer"
           className="ml-auto inline-flex items-center gap-1 font-bold text-emerald-600 hover:underline"
         >
+          {team && (
+            <span className="inline-flex items-center gap-1 font-black uppercase tracking-wide">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" aria-hidden />
+              Live
+            </span>
+          )}
           Watch on BBC iPlayer
           <span aria-hidden>↗</span>
         </a>
@@ -87,6 +92,44 @@ export default function NextMatchCountdown({ matches }: Readonly<Props>) {
           </span>
         )
       )}
+    </div>
+  )
+}
+
+/**
+ * The viewer's teams' next matches (one row per owned team), or — when no viewer
+ * is set or none of their teams have a fixture left — the tournament's next match.
+ */
+export default function NextMatchCountdown({ matches, state, meId }: Readonly<Props>) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = globalThis.setInterval(() => setNow(Date.now()), 30_000)
+    return () => globalThis.clearInterval(timer)
+  }, [])
+
+  const myTeamIds = meId ? (teamsByParticipant(state).get(meId) ?? []) : []
+  const mine = nextMatchesForTeams(matches, myTeamIds, now)
+
+  if (mine.length > 0) {
+    return (
+      <div className="nw-card space-y-2 p-4">
+        <h3 className="text-xs font-black uppercase tracking-wide text-slate-muted">
+          Your teams’ next matches
+        </h3>
+        {mine.map((e) => (
+          <MatchRow key={e.teamId} match={e.match} live={e.live} now={now} teamId={e.teamId} />
+        ))}
+      </div>
+    )
+  }
+
+  // No viewer, or their teams are done: fall back to the tournament's next match.
+  const next = pickNext(matches, now)
+  if (!next) return null
+  return (
+    <div className="nw-card p-4">
+      <MatchRow match={next.match} live={next.live} now={now} />
     </div>
   )
 }
