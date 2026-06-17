@@ -113,7 +113,7 @@ export default function NextMatchCountdown({ matches, state, meId }: Readonly<Pr
 
   if (mine.length > 0) {
     return (
-      <div className="nw-card space-y-2 p-4">
+      <div className="nw-card mb-6 space-y-2 p-4">
         <h3 className="text-xs font-black uppercase tracking-wide text-slate-muted">
           Your teams’ next matches
         </h3>
@@ -128,7 +128,7 @@ export default function NextMatchCountdown({ matches, state, meId }: Readonly<Pr
   const next = pickNext(matches, now)
   if (!next) return null
   return (
-    <div className="nw-card p-4">
+    <div className="nw-card mb-6 p-4">
       <MatchRow match={next.match} live={next.live} now={now} />
     </div>
   )

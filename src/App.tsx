@@ -92,11 +92,12 @@ function App() {
         })}
       </nav>
 
+      <NextMatchCountdown matches={data.matches} state={state} meId={meId} />
+
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === 'sweepstake' &&
           (state.locked ? (
             <div className="space-y-8">
-              <NextMatchCountdown matches={data.matches} state={state} meId={meId} />
               <Leaderboard leaderboard={data.leaderboard} meId={meId} />
               <ParticipantsPanel state={state} meId={meId} />
               <ShareCard state={state} />
@@ -115,7 +116,6 @@ function App() {
             </div>
           ) : (
             <div className="space-y-8">
-              <NextMatchCountdown matches={data.matches} state={state} meId={meId} />
               <AssignmentEditor state={state} setState={setState} />
               <Leaderboard leaderboard={data.leaderboard} meId={meId} />
             </div>
