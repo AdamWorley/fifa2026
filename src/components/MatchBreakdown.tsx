@@ -98,6 +98,20 @@ function formatDateOnly(date: string): string {
   })
 }
 
+/**
+ * Sort key for chronological order: the exact kickoff instant when known, else
+ * the match date at day start. Sorting on `date` alone left same-day fixtures in
+ * feed order rather than by kickoff time.
+ */
+function matchOrder(m: MatchResult): number {
+  if (m.kickoff) {
+    const t = Date.parse(m.kickoff)
+    if (!Number.isNaN(t)) return t
+  }
+  const d = Date.parse(`${m.date}T00:00:00Z`)
+  return Number.isNaN(d) ? 0 : d
+}
+
 type Filter = 'all' | MatchPhase
 
 const FILTERS: { id: Filter; label: string }[] = [
@@ -125,7 +139,7 @@ export default function MatchBreakdown({ matches, state, meId }: Readonly<Props>
       map.get(stageKey(m.stage))!.push(m)
     }
     for (const list of map.values()) {
-      list.sort((a, b) => a.date.localeCompare(b.date))
+      list.sort((a, b) => matchOrder(a) - matchOrder(b))
     }
     return map
   }, [matches, filter, now])
