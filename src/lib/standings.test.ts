@@ -50,7 +50,17 @@ describe('team stats', () => {
 
     const scotland = stats.get('scotland')!
     expect(scotland.goalDiff).toBe(-3)
-    expect(scotland.cards).toBe(3) // 2 yellow + 1 red
+    expect(scotland.cards).toBe(2) // 1 red + 2 yellows that merge into 1 red
+  })
+
+  it('merges every two yellows into one red across all matches', () => {
+    // Brazil collects 11 yellows over its two group matches and no reds. Every two
+    // yellows merge into a red, so that counts as 5 reds and 1 yellow — 6 cards.
+    const stats = computeTeamStats([
+      group('Brazil', 'Scotland', 1, 0, { hy: 6 }),
+      group('Brazil', 'Morocco', 1, 0, { hy: 5 }),
+    ])
+    expect(stats.get('brazil')!.cards).toBe(6)
   })
 
   it('ignores scheduled matches and unknown teams', () => {
@@ -82,7 +92,7 @@ describe('awards', () => {
     expect(awards.woodenSpoon).toEqual({ teamId: 'scotland', value: -3 })
   })
   it("Referee's Favourite goes to the most-carded team", () => {
-    expect(awards.refereesFavourite).toEqual({ teamId: 'scotland', value: 3 })
+    expect(awards.refereesFavourite).toEqual({ teamId: 'scotland', value: 2 })
   })
   it('is not final until all 72 group matches are played', () => {
     expect(awards.groupStageComplete).toBe(false)
