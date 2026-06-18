@@ -5,10 +5,12 @@ import { resolveTeamId } from './aliases'
 /** Total group-stage group fixtures that must finish before awards are final. */
 const TOTAL_GROUP_MATCHES = 72
 
-// Each booked player counts once towards "most cards": a yellow and a red weigh
-// the same, and a second-yellow dismissal arrives as a single red (the prior
-// yellow is not counted separately), so a player can add at most one card.
-const RED_CARD_WEIGHT = 1
+// "Most cards" totals the cards a team is shown across all its matches, with every
+// two yellows merging into a single red. A team with 11 yellows therefore counts as
+// 5 reds and 1 leftover yellow — 6 cards in total.
+function weightedCards(yellow: number, red: number): number {
+  return red + Math.ceil(yellow / 2)
+}
 
 export interface TeamStats {
   teamId: TeamId
@@ -92,7 +94,7 @@ export function computeTeamStats(matches: MatchResult[]): Map<TeamId, TeamStats>
 
   for (const s of stats.values()) {
     s.goalDiff = s.goalsFor - s.goalsAgainst
-    s.cards = s.yellow + s.red * RED_CARD_WEIGHT
+    s.cards = weightedCards(s.yellow, s.red)
   }
   return stats
 }
