@@ -87,6 +87,8 @@ export interface TeamLeaderboardEntry {
   teamId: TeamId
   /** Group-stage match points this team has earned (the ranking score). */
   points: number
+  /** Group-stage matches this team has played so far. */
+  played: number
   /** Prizes this team currently holds. */
   prizes: PrizeDef[]
   /** Participant the team was drawn by. */
@@ -139,6 +141,7 @@ export function buildTeamLeaderboard(
       id: teamId,
       teamId,
       points: teamStats.get(teamId)?.points ?? 0,
+      played: teamStats.get(teamId)?.played ?? 0,
       prizes: prizesByTeam.get(teamId) ?? [],
       ownerId,
       ownerName: nameById.get(ownerId)!,

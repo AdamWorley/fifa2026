@@ -112,6 +112,11 @@ function TeamCard({ entry, meId, rank, medal, movement, showPoints, dim }: Reado
             you
           </span>
         )}
+        {entry.played > 0 && (
+          <span className="ml-auto shrink-0 whitespace-nowrap font-semibold">
+            {entry.played} {entry.played === 1 ? 'match' : 'matches'} played
+          </span>
+        )}
       </div>
     </div>
   )
