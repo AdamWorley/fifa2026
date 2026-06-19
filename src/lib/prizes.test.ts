@@ -54,6 +54,15 @@ describe('team leaderboard', () => {
     expect(board.playing.map((e) => e.points)).toEqual([9, 9, 6])
   })
 
+  it('carries each team\'s matches-played count through to the leaderboard', () => {
+    const board = buildTeamLeaderboard(state, prizeStandings, stats, noneOut)
+    const argentina = board.playing.find((e) => e.teamId === 'argentina')!
+    expect(argentina.played).toBe(2)
+    // Scotland has no stats entry, so it has played nothing.
+    const scotland = board.upcoming.find((e) => e.teamId === 'scotland')!
+    expect(scotland.played).toBe(0)
+  })
+
   it('records the participant each team was drawn by', () => {
     const board = buildTeamLeaderboard(state, prizeStandings, stats, noneOut)
     const argentina = board.playing.find((e) => e.teamId === 'argentina')!
