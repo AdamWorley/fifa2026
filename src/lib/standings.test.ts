@@ -118,12 +118,28 @@ describe('eliminated teams', () => {
   })
 
   it('ignores unpopulated placeholder fixtures', () => {
+    // Later-round fixtures the feed hasn't resolved yet read like "W74 vs W77";
+    // they name no real team, so they neither qualify nor eliminate anyone.
     const placeholder: MatchResult = {
+      ...knockout('W74', 'W77', 0, 0),
+      status: 'scheduled',
+      score: null,
+    }
+    expect(computeEliminatedTeams([...matches, placeholder], stats, true).size).toBe(0)
+  })
+
+  it('keeps teams in upcoming (unplayed) knockout fixtures alive', () => {
+    // The knockout line-up is known but most matches haven't kicked off yet.
+    // Every named team has qualified even though its match is still scheduled.
+    const upcoming: MatchResult = {
       ...knockout('Brazil', 'Morocco', 0, 0),
       status: 'scheduled',
       score: null,
     }
-    expect(computeEliminatedTeams([...matches, placeholder], stats, false).size).toBe(0)
+    const out = computeEliminatedTeams([...matches, upcoming], stats, true)
+    expect(out.has('brazil')).toBe(false)
+    expect(out.has('morocco')).toBe(false)
+    expect(out.has('scotland')).toBe(true) // played the group stage, didn't qualify
   })
 
   it('eliminates group non-qualifiers once the group stage is complete', () => {
