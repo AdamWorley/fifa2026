@@ -172,8 +172,10 @@ export function computeEliminatedTeams(
 
   for (const m of matches) {
     if (m.isGroupStage) continue
-    // Skip empty placeholder fixtures that the feed hasn't populated yet.
-    if (!m.score && m.status === 'scheduled') continue
+    // Any team named in a knockout fixture has qualified — whether that match has
+    // been played yet or not. Unpopulated placeholder fixtures (e.g. "W74" vs
+    // "W77") don't resolve to a team id, so they're ignored without needing to
+    // skip scheduled matches (which would wrongly drop upcoming knockout teams).
     const homeId = resolveTeamId(m.home)
     const awayId = resolveTeamId(m.away)
     if (homeId) qualified.add(homeId)
